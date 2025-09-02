@@ -1,6 +1,10 @@
-// App.js
+/*
+ * FILENAME: App.js
+ * ----------------
+ * This is the main React component for the extension's UI.
+ */
 import React, { useState, useEffect } from 'react';
-import './App.css'; // Import the new modern styles
+import './App.css'; // Import the modern styles
 
 function App() {
   const [apiKey, setApiKey] = useState('');
@@ -9,7 +13,7 @@ function App() {
   const [response, setResponse] = useState('Welcome! Ask me anything to get started.');
   const [isLoading, setIsLoading] = useState(false);
 
-  // EFFECT 1: Check for stored API key on initial load
+  // Effect 1: Check for stored API key on initial load
   useEffect(() => {
     chrome.storage.local.get(['geminiApiKey'], (result) => {
       if (result.geminiApiKey) {
@@ -19,7 +23,7 @@ function App() {
     });
   }, []);
 
-  // EFFECT 2: Listen for the 'reset' command from the content script
+  // Effect 2: Listen for the 'reset' command from the content script
   useEffect(() => {
     const handleReset = () => {
       console.log("Reset command received in App.js");
@@ -48,13 +52,12 @@ function App() {
     setIsKeySaved(false);
   };
 
-  // Allow submitting with Ctrl+Enter or Cmd+Enter
   const handleKeyDown = (e) => {
     if ((e.key === 'Enter' && (e.metaKey || e.ctrlKey)) && !isLoading) {
       handleSubmit(e);
     }
   };
-
+  
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!prompt.trim()) return;
@@ -72,6 +75,12 @@ function App() {
         setIsLoading(false);
       }
     );
+  };
+
+  // Handler for the reset position button
+  const handleResetPosition = () => {
+    // Dispatch a custom event that the content script can listen for
+    window.dispatchEvent(new CustomEvent('reset-gemini-position'));
   };
 
   // Conditional Rendering for API Key Input
@@ -100,9 +109,20 @@ function App() {
   return (
     <div className="app-container">
       <div className="chat-view">
-        <div className="header">
+        <div className="header" title="Drag to move">
           <h3>Gemini Assistant</h3>
-          <button onClick={handleChangeKey} className="change-key-btn">Change Key</button>
+          <div className="header-controls">
+            <button
+              onClick={handleResetPosition}
+              className="icon-btn"
+              title="Reset Position (Alt+Shift+R)"
+            >
+              <img src={chrome.runtime.getURL("assets/reset-icon.svg")} alt="Reset Position" />
+            </button>
+            <button onClick={handleChangeKey} className="change-key-btn">
+              Change Key
+            </button>
+          </div>
         </div>
         <div className="response-area">
           {isLoading ? (

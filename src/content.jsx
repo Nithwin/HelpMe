@@ -2,88 +2,180 @@
  * FILENAME: content.js
  * --------------------
  * This script is the main entry point for the extension's UI.
+ * It is injected into every webpage the user visits.
+ * Responsibilities:
+ * 1. Create a host element and inject the React app into a Shadow DOM.
+ * 2. Handle keyboard shortcuts from the background script.
+ * 3. Manage the window's draggable functionality.
+ * 4. Persist the window's position and transparency state.
  */
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App';
+import App from '../src/App'; // Adjust path if your structure differs
 
-let root = null;
 let container = null;
 let shadowRoot = null;
+const DEFAULTS = {
+  position: { top: '20px', left: null, right: '20px' },
+  isTransparent: true,
+};
 
+// --- Command Listener ---
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  switch (request.command) {
+    case 'toggle-extension':
+    case 'toggle-and-focus':
+      toggleExtensionUI(request.command === 'toggle-and-focus');
+      sendResponse({ status: "UI Toggled" });
+      break;
+    case 'reset-chat':
+      window.dispatchEvent(new CustomEvent('reset-gemini-chat'));
+      sendResponse({ status: "Reset command dispatched" });
+      break;
+    case 'reset-position':
+      resetPosition();
+      sendResponse({ status: "Position reset" });
+      break;
+    case 'toggle-transparency':
+      toggleTransparency();
+      sendResponse({ status: "Transparency toggled" });
+      break;
+  }
+  return true; // Keep the message channel open for async response
+});
+
+// --- UI Management ---
 function toggleExtensionUI(focusInput = false) {
   if (!container) {
-    createUI();
-  }
-  
-  const isVisible = container.style.display === 'block';
-  container.style.display = isVisible ? 'none' : 'block';
-
-  // If we are making it visible and should focus, find the textarea
-  if (!isVisible && focusInput) {
-    // We need a slight delay for the element to be fully rendered and available
-    setTimeout(() => {
-        const textarea = shadowRoot.querySelector('textarea');
-        if (textarea) {
-            textarea.focus();
+    createUI().then(() => {
+        if (focusInput) {
+            setTimeout(() => shadowRoot.querySelector('textarea')?.focus(), 100);
         }
-    }, 100);
+    });
+  } else {
+    const isVisible = container.style.display === 'block';
+    container.style.display = isVisible ? 'none' : 'block';
+    if (!isVisible && focusInput) {
+      setTimeout(() => shadowRoot.querySelector('textarea')?.focus(), 100);
+    }
   }
 }
 
-// Listen for messages from the background script
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.command === 'toggle-extension') {
-    toggleExtensionUI(false);
-    sendResponse({ status: "UI Toggled" });
-  } else if (request.command === 'toggle-and-focus') {
-    toggleExtensionUI(true);
-    sendResponse({ status: "UI Toggled and Focused" });
-  } else if (request.command === 'reset-chat') {
-    if (container) {
-      window.dispatchEvent(new CustomEvent('reset-gemini-chat'));
-    }
-    sendResponse({ status: "Reset command dispatched" });
-  }
-  return true;
-});
-
-function createUI() {
+async function createUI() {
   container = document.createElement('div');
   container.id = 'gemini-shadow-container';
   document.body.appendChild(container);
 
+  const state = await chrome.storage.local.get(['position', 'isTransparent']);
+  const currentPos = state.position || DEFAULTS.position;
+  const isTransparent = state.isTransparent !== undefined ? state.isTransparent : DEFAULTS.isTransparent;
+
+  Object.assign(container.style, {
+    position: 'fixed',
+    top: currentPos.top,
+    right: currentPos.right,
+    left: currentPos.left,
+    width: '400px',
+    height: '600px',
+    zIndex: '2147483647',
+    display: 'block',
+    borderRadius: '12px',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+    overflow: 'hidden',
+    transition: 'background-color 0.3s, backdrop-filter 0.3s, border 0.3s',
+  });
+  
+  if (isTransparent) {
+      container.classList.add('is-transparent');
+  }
+
   shadowRoot = container.attachShadow({ mode: 'open' });
 
-  const appRoot = document.createElement('div');
-  appRoot.id = 'react-root';
-  shadowRoot.appendChild(appRoot);
+  const styleEl = document.createElement('style');
+  styleEl.textContent = `
+    :host(.is-transparent) {
+        background-color: rgba(30, 30, 30, 0.7);
+        backdrop-filter: blur(12px) saturate(150%);
+        -webkit-backdrop-filter: blur(12px) saturate(150%);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    :host(:not(.is-transparent)) {
+        background-color: #1e1e1e;
+        border: 1px solid #444;
+    }
+    #react-root { height: 100%; }
+  `;
+  shadowRoot.appendChild(styleEl);
 
   const styleLink = document.createElement('link');
   styleLink.rel = 'stylesheet';
   styleLink.href = chrome.runtime.getURL('assets/content.css');
   shadowRoot.appendChild(styleLink);
+  
+  const appRoot = document.createElement('div');
+  appRoot.id = 'react-root';
+  shadowRoot.appendChild(appRoot);
 
-  root = ReactDOM.createRoot(appRoot);
-  root.render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
-  );
+  ReactDOM.createRoot(appRoot).render(<React.StrictMode><App /></React.StrictMode>);
 
+  setTimeout(() => {
+    const header = shadowRoot.querySelector('.header');
+    if (header) makeDraggable(container, header);
+  }, 200);
+
+  window.addEventListener('reset-gemini-position', resetPosition);
+}
+
+// --- Feature Logic ---
+function resetPosition() {
+  if (!container) return;
   Object.assign(container.style, {
-    position: 'fixed',
-    top: '20px',
-    right: '20px',
-    width: '400px',
-    height: '600px', // Increased height for better usability
-    zIndex: '2147483647', // Max z-index
-    display: 'none',
-    border: '1px solid #444',
-    borderRadius: '12px',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
-    overflow: 'hidden',
-    backgroundColor: '#1e1e1e', // Match App's background
-    fontFamily: `'Inter', sans-serif`,
+    top: DEFAULTS.position.top,
+    left: DEFAULTS.position.left,
+    right: DEFAULTS.position.right
   });
+  chrome.storage.local.set({ position: DEFAULTS.position });
+}
+
+function toggleTransparency() {
+    if (!container) return;
+    const isTransparent = container.classList.toggle('is-transparent');
+    chrome.storage.local.set({ isTransparent });
+}
+
+function makeDraggable(element, handle) {
+  let initialX, initialY, xOffset = 0, yOffset = 0;
+
+  handle.onmousedown = (e) => {
+    e.preventDefault();
+    const rect = element.getBoundingClientRect();
+    xOffset = rect.left;
+    yOffset = rect.top;
+    initialX = e.clientX - xOffset;
+    initialY = e.clientY - yOffset;
+    document.onmousemove = dragElement;
+    document.onmouseup = closeDragElement;
+  };
+
+  function dragElement(e) {
+    e.preventDefault();
+    const newX = e.clientX - initialX;
+    const newY = e.clientY - initialY;
+
+    // Constrain movement within the viewport
+    const newTop = Math.max(0, Math.min(newY, window.innerHeight - element.offsetHeight));
+    const newLeft = Math.max(0, Math.min(newX, window.innerWidth - element.offsetWidth));
+
+    element.style.top = `${newTop}px`;
+    element.style.left = `${newLeft}px`;
+    element.style.right = 'auto';
+  }
+
+  function closeDragElement() {
+    document.onmouseup = null;
+    document.onmousemove = null;
+    chrome.storage.local.set({ 
+        position: { top: element.style.top, left: element.style.left, right: null } 
+    });
+  }
 }

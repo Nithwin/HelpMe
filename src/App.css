@@ -1,4 +1,10 @@
-/* App.css */
+/*
+ * FILENAME: App.css
+ * -----------------
+ * Contains all styling for the React component.
+ * This file defines the dark theme, layout, and modern aesthetic.
+ */
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
 
 :root {
@@ -26,14 +32,13 @@ body {
   flex-direction: column;
   height: 100%;
   width: 100%;
-  background-color: var(--background-color);
-  box-sizing: border-box; /* Ensures padding doesn't affect total width/height */
+  background-color: transparent; /* Allows transparency from host */
+  box-sizing: border-box;
 }
 
 .settings-view, .chat-view {
   display: flex;
   flex-direction: column;
-  padding: 24px;
   box-sizing: border-box;
   height: 100%;
   animation: fadeIn 0.3s ease-in-out;
@@ -49,15 +54,64 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
-  flex-shrink: 0; /* Prevents header from shrinking */
+  flex-shrink: 0;
+  cursor: move; /* Indicates the header is draggable */
+  user-select: none; /* Prevents text selection while dragging */
+  padding: 16px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .header h3 {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--text-primary-color);
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--text-secondary-color);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.icon-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary-color);
+}
+
+.icon-btn img {
+  width: 16px;
+  height: 16px;
+  filter: invert(80%);
+}
+
+.change-key-btn {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary-color);
+  font-size: 0.8rem;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.change-key-btn:hover {
+  background-color: var(--surface-color);
+  color: var(--text-primary-color);
+  border-color: var(--surface-color);
 }
 
 /* --- API Key / Settings View --- */
@@ -65,6 +119,7 @@ body {
   justify-content: center;
   align-items: center;
   text-align: center;
+  padding: 24px;
 }
 
 .settings-view h2 {
@@ -119,38 +174,20 @@ button:disabled {
   cursor: not-allowed;
 }
 
-.change-key-btn {
-  background: none;
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary-color);
-  font-size: 0.8rem;
-  padding: 6px 12px;
-}
-
-.change-key-btn:hover {
-  background-color: var(--surface-color);
-  color: var(--text-primary-color);
-}
-
 /* --- Chat View Specifics --- */
 .chat-view {
-  padding: 0; /* Remove padding for edge-to-edge layout */
-}
-
-.chat-view .header {
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--border-color);
+  padding: 0;
 }
 
 .response-area {
-  flex-grow: 1; /* This is key for layout */
-  overflow-y: auto; /* THIS ENABLES SCROLLING */
+  flex-grow: 1;
+  overflow-y: auto; /* Enables scrolling */
   padding: 16px 24px;
   color: var(--text-secondary-color);
   font-size: 0.95rem;
   line-height: 1.6;
-  white-space: pre-wrap; /* Respects newlines from the API response */
-  word-wrap: break-word; /* Prevents long words from overflowing */
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 .response-area p {
@@ -180,17 +217,16 @@ button:disabled {
   to { transform: rotate(360deg); }
 }
 
-
 .chat-view form {
   display: flex;
   flex-direction: column;
   padding: 16px 24px;
-  border-top: 1px solid var(--border-color);
-  background-color: var(--background-color);
-  flex-shrink: 0; /* Prevents form from shrinking */
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: transparent;
+  flex-shrink: 0;
 }
 
 .chat-view textarea {
-  resize: none; /* User shouldn't resize this */
+  resize: none;
   margin-bottom: 12px;
 }
