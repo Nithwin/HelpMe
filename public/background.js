@@ -11,7 +11,7 @@ chrome.commands.onCommand.addListener((command) => {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     if (tabs && tabs[0]) {
       const activeTabId = tabs[0].id;
-      
+
       chrome.tabs.sendMessage(activeTabId, { command: command }, (response) => {
         if (chrome.runtime.lastError) {
           console.warn(
@@ -28,7 +28,7 @@ chrome.commands.onCommand.addListener((command) => {
   });
 });
 
-// 2. Listen for messages from the UI (e.g., the React app)
+// 2. Listen for messages from the UI (React app)
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'FETCH_GEMINI') {
     chrome.storage.local.get(['geminiApiKey'], async (result) => {
@@ -38,11 +38,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return;
       }
 
-      // --- FINAL FIX ---
-      // Using the 'gemini-1.5-flash' model, which your API key has confirmed access to.
-      const API_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-      // --- END OF FIX ---
-      
+      const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+
       try {
         const response = await fetch(API_URL, {
           method: 'POST',
@@ -61,7 +58,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
 
         const data = await response.json();
-        
         const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "No content found in response.";
         sendResponse({ success: true, text: text });
 
@@ -71,6 +67,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
     });
 
-    return true; 
+    return true; // Indicates an asynchronous response
   }
 });

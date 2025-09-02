@@ -1,16 +1,15 @@
-// App.js (inside your src folder)
+// App.js
 import React, { useState, useEffect } from 'react';
-// Make sure you have a basic App.css or similar for styling
-// import './App.css'; 
+import './App.css'; // Import the new modern styles
 
 function App() {
   const [apiKey, setApiKey] = useState('');
   const [isKeySaved, setIsKeySaved] = useState(false);
   const [prompt, setPrompt] = useState('');
-  const [response, setResponse] = useState('');
+  const [response, setResponse] = useState('Welcome! Ask me anything to get started.');
   const [isLoading, setIsLoading] = useState(false);
 
-  // EFFECT 1: Check for the stored API key when the app first loads.
+  // EFFECT 1: Check for stored API key on initial load
   useEffect(() => {
     chrome.storage.local.get(['geminiApiKey'], (result) => {
       if (result.geminiApiKey) {
@@ -18,25 +17,21 @@ function App() {
         setIsKeySaved(true);
       }
     });
-  }, []); // The empty array [] means this effect runs only once.
+  }, []);
 
-  // EFFECT 2: Listen for the 'reset' command from our content script.
+  // EFFECT 2: Listen for the 'reset' command from the content script
   useEffect(() => {
     const handleReset = () => {
       console.log("Reset command received in App.js");
       setPrompt('');
-      setResponse('');
+      setResponse('Chat has been reset. Ask me something new!');
     };
 
-    // This is the new event listener for the Shadow DOM method
     window.addEventListener('reset-gemini-chat', handleReset);
-
-    // This is a cleanup function that removes the listener when the component is unmounted
     return () => {
       window.removeEventListener('reset-gemini-chat', handleReset);
     };
-  }, []); // This effect also runs only once.
-
+  }, []);
 
   const handleKeySave = () => {
     if (!apiKey) {
@@ -48,18 +43,24 @@ function App() {
       console.log('API Key saved.');
     });
   };
-  
+
   const handleChangeKey = () => {
     setIsKeySaved(false);
-  }
+  };
+
+  // Allow submitting with Ctrl+Enter or Cmd+Enter
+  const handleKeyDown = (e) => {
+    if ((e.key === 'Enter' && (e.metaKey || e.ctrlKey)) && !isLoading) {
+      handleSubmit(e);
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!prompt) return;
+    if (!prompt.trim()) return;
     setIsLoading(true);
     setResponse('');
 
-    // Send a message to the background script to fetch from the API
     chrome.runtime.sendMessage(
       { type: 'FETCH_GEMINI', prompt: prompt },
       (apiResponse) => {
@@ -73,39 +74,57 @@ function App() {
     );
   };
 
+  // Conditional Rendering for API Key Input
   if (!isKeySaved) {
     return (
-      <div className="settings-view">
-        <h2>Enter your Gemini API Key</h2>
-        <input
-          type="password"
-          value={apiKey}
-          onChange={(e) => setApiKey(e.target.value)}
-          placeholder="Your Gemini API Key"
-        />
-        <button onClick={handleKeySave}>Save Key</button>
+      <div className="app-container">
+        <div className="settings-view">
+          <h2>Enter Gemini API Key</h2>
+          <p style={{ color: 'var(--text-secondary-color)', marginTop: '-10px', marginBottom: '20px' }}>
+            Your key is stored locally and never shared.
+          </p>
+          <input
+            type="password"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder="Your Gemini API Key"
+            onKeyDown={(e) => e.key === 'Enter' && handleKeySave()}
+          />
+          <button onClick={handleKeySave}>Save Key</button>
+        </div>
       </div>
     );
   }
 
+  // Main Chat Interface
   return (
-    <div className="chat-view">
-      <div className="header">
-        <h3>Gemini Assistant</h3>
-        <button onClick={handleChangeKey} className="change-key-btn">Change Key</button>
+    <div className="app-container">
+      <div className="chat-view">
+        <div className="header">
+          <h3>Gemini Assistant</h3>
+          <button onClick={handleChangeKey} className="change-key-btn">Change Key</button>
+        </div>
+        <div className="response-area">
+          {isLoading ? (
+            <div className="loader">Loading...</div>
+          ) : (
+            <p>{response}</p>
+          )}
+        </div>
+        <form onSubmit={handleSubmit}>
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask anything... (Ctrl+Enter to send)"
+            rows="4"
+            disabled={isLoading}
+          />
+          <button type="submit" disabled={isLoading || !prompt.trim()}>
+            {isLoading ? 'Thinking...' : 'Send'}
+          </button>
+        </form>
       </div>
-      <div className="response-area">
-        {isLoading ? <p>Loading...</p> : <p>{response}</p>}
-      </div>
-      <form onSubmit={handleSubmit}>
-        <textarea
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Ask Gemini anything..."
-          rows="4"
-        />
-        <button type="submit" disabled={isLoading}>Send</button>
-      </form>
     </div>
   );
 }
