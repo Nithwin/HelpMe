@@ -5,13 +5,10 @@
   right: 20px;
   width: 400px;
   height: 500px;
-  border: 1px solid #ccc;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   z-index: 999999;
   /* Start hidden */
   display: none; 
   /* The transparency you wanted */
-  opacity: 0.95; 
-  transition: opacity 0.2s ease-in-out;
+  /* opacity: 0.95;  */
 }

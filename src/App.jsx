@@ -110,7 +110,7 @@ function App() {
     <div className="app-container">
       <div className="chat-view">
         <div className="header" title="Drag to move">
-          <h3>Gemini Assistant</h3>
+          <h3></h3>
           <div className="header-controls">
             <button
               onClick={handleResetPosition}

@@ -80,7 +80,6 @@ async function createUI() {
     zIndex: '2147483647',
     display: 'block',
     borderRadius: '12px',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
     overflow: 'hidden',
     transition: 'background-color 0.3s, backdrop-filter 0.3s, border 0.3s',
   });
@@ -94,14 +93,10 @@ async function createUI() {
   const styleEl = document.createElement('style');
   styleEl.textContent = `
     :host(.is-transparent) {
-        background-color: rgba(30, 30, 30, 0.7);
-        backdrop-filter: blur(12px) saturate(150%);
-        -webkit-backdrop-filter: blur(12px) saturate(150%);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background-color: rgba(30, 30, 30, 0);
     }
     :host(:not(.is-transparent)) {
         background-color: #1e1e1e;
-        border: 1px solid #444;
     }
     #react-root { height: 100%; }
   `;
