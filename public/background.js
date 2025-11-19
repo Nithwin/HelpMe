@@ -39,48 +39,62 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
       // Allow the UI to provide a preferred model name, otherwise try stored value or defaults
       chrome.storage.local.get(['geminiModel'], async (mRes) => {
-        const requestedModel = request.model || mRes.geminiModel || 'gemini-1.5-flash-latest';
+        const requestedModel = request.model || mRes.geminiModel || 'gemini-2.5-flash';
 
         // A small list of fallbacks in case the chosen model is not available
-        const fallbackModels = [requestedModel, 'gemini-1.5', 'gemini-1.0', 'text-bison-001'];
+        // Using currently available models (verified Nov 2025)
+        const fallbackModels = [requestedModel, 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest', 'gemini-pro-latest'];
+        const attemptedModels = [];
 
-        async function tryModel(modelName) {
-          // Keep using the existing API shape but swap the model path string when constructing the URL
-          const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+        async function tryModel(rawModelName) {
+          // 1. SANITIZE: Remove 'models/' prefix if the user accidentally saved it that way
+          const modelName = rawModelName.replace(/^models\//, '');
+
+          // 2. CONSTRUCT URL
+          const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+
+          // Debug log to check the exact URL being hit (View this in Extensions > Service Worker console)
+          console.log("Attempting fetch:", API_URL);
 
           try {
             const response = await fetch(API_URL, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
+                'x-goog-api-key': apiKey,
               },
               body: JSON.stringify({
                 contents: [{ parts: [{ text: request.prompt }] }],
               }),
             });
 
-            // If model not found or other error, return a structured error
+            // If model not found or other error
             if (!response.ok) {
               let body = {};
               try { body = await response.json(); } catch (e) { body = { message: 'No JSON response' }; }
+              
               const errMsg = `HTTP ${response.status} - ${JSON.stringify(body)}`;
-              // If the error mentions model or 404, return a special code so we can try fallback
-              const isModelError = response.status === 404 || /model not found|Model not found|MODEL_NOT_FOUND/i.test(JSON.stringify(body));
+              console.warn(`Failed ${modelName}:`, errMsg); // Log the specific error
+
+              // Check for specific model not found markers
+              const isModelError = response.status === 404 || /model not found|prop found|404/i.test(JSON.stringify(body));
               return { ok: false, isModelError, message: errMsg };
             }
 
             const data = await response.json();
-            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "No content found in response.";
+            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "No content found.";
             return { ok: true, text };
 
           } catch (error) {
-            return { ok: false, isModelError: /model not found|MODEL_NOT_FOUND/i.test(String(error)), message: error.message };
+            console.error(`Network/Code Error on ${modelName}:`, error);
+            return { ok: false, isModelError: true, message: error.message };
           }
         }
 
         // Try the requested model first, then fallbacks
         for (const m of fallbackModels) {
           if (!m) continue;
+          attemptedModels.push(m);
           const resultTry = await tryModel(m);
           if (resultTry.ok) {
             sendResponse({ success: true, text: resultTry.text, model: m });
@@ -95,7 +109,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
 
         // If all fallbacks failed with model-not-found, send a helpful message
-        sendResponse({ success: false, error: 'Model not found for requested options. Try selecting a different model in the extension settings.' });
+        sendResponse({ success: false, error: `Model not found. Attempted: ${[...new Set(attemptedModels)].join(', ')}. Please check the model name in settings or try a different one.` });
       });
     });
 

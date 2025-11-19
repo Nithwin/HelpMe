@@ -103,7 +103,7 @@ function App() {
               type="text"
               value={modelName}
               onChange={(e) => setModelName(e.target.value)}
-              placeholder="e.g. gemini-1.5-flash-latest or gemini-1.5"
+              placeholder="e.g. gemini-2.5-flash or gemini-2.0-flash"
             />
           </div>
           <input
