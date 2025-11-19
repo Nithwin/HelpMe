@@ -37,34 +37,66 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ success: false, error: "API key is not set." });
         return;
       }
+      // Allow the UI to provide a preferred model name, otherwise try stored value or defaults
+      chrome.storage.local.get(['geminiModel'], async (mRes) => {
+        const requestedModel = request.model || mRes.geminiModel || 'gemini-1.5-flash-latest';
 
-      const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+        // A small list of fallbacks in case the chosen model is not available
+        const fallbackModels = [requestedModel, 'gemini-1.5', 'gemini-1.0', 'text-bison-001'];
 
-      try {
-        const response = await fetch(API_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: request.prompt }] }],
-          }),
-        });
+        async function tryModel(modelName) {
+          // Keep using the existing API shape but swap the model path string when constructing the URL
+          const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-        if (!response.ok) {
-          const errorBody = await response.json();
-          const errorMessage = `HTTP error! Status: ${response.status}, Body: ${JSON.stringify(errorBody)}`;
-          throw new Error(errorMessage);
+          try {
+            const response = await fetch(API_URL, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: request.prompt }] }],
+              }),
+            });
+
+            // If model not found or other error, return a structured error
+            if (!response.ok) {
+              let body = {};
+              try { body = await response.json(); } catch (e) { body = { message: 'No JSON response' }; }
+              const errMsg = `HTTP ${response.status} - ${JSON.stringify(body)}`;
+              // If the error mentions model or 404, return a special code so we can try fallback
+              const isModelError = response.status === 404 || /model not found|Model not found|MODEL_NOT_FOUND/i.test(JSON.stringify(body));
+              return { ok: false, isModelError, message: errMsg };
+            }
+
+            const data = await response.json();
+            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "No content found in response.";
+            return { ok: true, text };
+
+          } catch (error) {
+            return { ok: false, isModelError: /model not found|MODEL_NOT_FOUND/i.test(String(error)), message: error.message };
+          }
         }
 
-        const data = await response.json();
-        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "No content found in response.";
-        sendResponse({ success: true, text: text });
+        // Try the requested model first, then fallbacks
+        for (const m of fallbackModels) {
+          if (!m) continue;
+          const resultTry = await tryModel(m);
+          if (resultTry.ok) {
+            sendResponse({ success: true, text: resultTry.text, model: m });
+            return;
+          }
+          // If model error, try next fallback; otherwise break and report the error
+          if (!resultTry.isModelError) {
+            sendResponse({ success: false, error: resultTry.message });
+            return;
+          }
+          // otherwise continue to next fallback model
+        }
 
-      } catch (error) {
-        console.error("Error fetching from Gemini API:", error);
-        sendResponse({ success: false, error: error.message });
-      }
+        // If all fallbacks failed with model-not-found, send a helpful message
+        sendResponse({ success: false, error: 'Model not found for requested options. Try selecting a different model in the extension settings.' });
+      });
     });
 
     return true; // Indicates an asynchronous response

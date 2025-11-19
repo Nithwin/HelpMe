@@ -9,6 +9,7 @@ import './App.css'; // Import the modern styles
 function App() {
   const [apiKey, setApiKey] = useState('');
   const [isKeySaved, setIsKeySaved] = useState(false);
+  const [modelName, setModelName] = useState('');
   const [prompt, setPrompt] = useState('');
   const [response, setResponse] = useState('Welcome! Ask me anything to get started.');
   const [isLoading, setIsLoading] = useState(false);
@@ -20,6 +21,10 @@ function App() {
         setApiKey(result.geminiApiKey);
         setIsKeySaved(true);
       }
+    });
+    // load saved model name if available
+    chrome.storage.local.get(['geminiModel'], (res) => {
+      if (res.geminiModel) setModelName(res.geminiModel);
     });
   }, []);
 
@@ -42,7 +47,7 @@ function App() {
       alert('Please enter an API key.');
       return;
     }
-    chrome.storage.local.set({ geminiApiKey: apiKey }, () => {
+    chrome.storage.local.set({ geminiApiKey: apiKey, geminiModel: modelName || undefined }, () => {
       setIsKeySaved(true);
       console.log('API Key saved.');
     });
@@ -65,7 +70,7 @@ function App() {
     setResponse('');
 
     chrome.runtime.sendMessage(
-      { type: 'FETCH_GEMINI', prompt: prompt },
+      { type: 'FETCH_GEMINI', prompt: prompt, model: modelName },
       (apiResponse) => {
         if (apiResponse && apiResponse.success) {
           setResponse(apiResponse.text);
@@ -89,9 +94,18 @@ function App() {
       <div className="app-container">
         <div className="settings-view">
           <h2>Enter Gemini API Key</h2>
-          <p style={{ color: 'var(--text-secondary-color)', marginTop: '-10px', marginBottom: '20px' }}>
+          <p style={{ marginTop: '-10px', marginBottom: '20px' }}>
             Your key is stored locally and never shared.
           </p>
+          <div style={{ width: '100%', marginBottom: '12px' }}>
+            <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px' }}>Model (optional)</label>
+            <input
+              type="text"
+              value={modelName}
+              onChange={(e) => setModelName(e.target.value)}
+              placeholder="e.g. gemini-1.5-flash-latest or gemini-1.5"
+            />
+          </div>
           <input
             type="password"
             value={apiKey}
@@ -110,7 +124,7 @@ function App() {
     <div className="app-container">
       <div className="chat-view">
         <div className="header" title="Drag to move">
-          <h3></h3>
+          <h3>{modelName ? `Model: ${modelName}` : 'Model: (default)'} </h3>
           <div className="header-controls">
             <button
               onClick={handleResetPosition}

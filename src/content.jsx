@@ -92,11 +92,12 @@ async function createUI() {
 
   const styleEl = document.createElement('style');
   styleEl.textContent = `
+    /* Keep host background transparent so page shows through; avoid hard color values */
     :host(.is-transparent) {
-        background-color: rgba(30, 30, 30, 0);
+      background-color: transparent;
     }
     :host(:not(.is-transparent)) {
-        background-color: #1e1e1e;
+      background-color: transparent;
     }
     #react-root { height: 100%; }
   `;
