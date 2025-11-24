@@ -56,6 +56,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           // Debug log to check the exact URL being hit (View this in Extensions > Service Worker console)
           console.log("Attempting fetch:", API_URL);
 
+          // 3. BUILD REQUEST BODY with concise mode instruction if needed
+          const userPrompt = request.prompt;
+          const finalPrompt = request.concise 
+            ? `Answer the following question directly and concisely without any explanation, context, or additional information. Provide only the core answer:\n\n${userPrompt}`
+            : userPrompt;
+
           try {
             const response = await fetch(API_URL, {
               method: 'POST',
@@ -64,7 +70,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 'x-goog-api-key': apiKey,
               },
               body: JSON.stringify({
-                contents: [{ parts: [{ text: request.prompt }] }],
+                contents: [{ parts: [{ text: finalPrompt }] }],
               }),
             });
 

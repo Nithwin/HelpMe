@@ -175,3 +175,24 @@ function makeDraggable(element, handle) {
     });
   }
 }
+
+// --- Cross-Browser Shortcut Fallback ---
+// Some older system/browser setups fail to dispatch extension commands
+// (e.g. Ctrl+Space / Command+Space intercepted by OS). We add a direct
+// key listener here as a resilient fallback so the UI still toggles.
+if (!window.__geminiShortcutListenerAdded) {
+  window.__geminiShortcutListenerAdded = true;
+  window.addEventListener('keydown', (e) => {
+    // Ignore if typing inside our shadow UI
+    if (shadowRoot && shadowRoot.contains(e.target)) return;
+    // Basic checks (avoid auto-repeat flicker)
+    if (e.repeat) return;
+    const ctrlOrMeta = e.ctrlKey || e.metaKey;
+    const spacePressed = (e.code === 'Space') || (e.key === ' ') || (e.key === 'Spacebar') || (e.keyCode === 32);
+    if (ctrlOrMeta && spacePressed) {
+      // Prevent page scrolling or other handlers
+      e.preventDefault();
+      toggleExtensionUI(true);
+    }
+  }, true); // capture phase to beat page handlers
+}

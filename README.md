@@ -135,6 +135,7 @@ Please open an issue or a pull request with a clear title and description.
 - No response from assistant: verify `VITE_GEMINI_API_KEY` and `VITE_GEMINI_API_URL` are set and valid.
 - Extension not loading: ensure you selected the correct folder (`public/` for dev, `dist/` for production) when using "Load unpacked".
 - Styles not applied: check that `content.css` is referenced in `manifest.json` as a content script or imported by the content entry.
+- Ctrl+Space / Command+Space not working: Some OS configurations reserve these keys (IME switch, Spotlight). The extension now includes a direct in-page fallback listener; try the shortcut again after focusing the page. If still blocked, customize the command in `chrome://extensions/shortcuts` (suggest "Ctrl+Shift+Space" or "Alt+Space").
 
 ## License
 Add your preferred license here (e.g., MIT). This README does not change licensing; ensure you include a `LICENSE` file if you plan to open-source.

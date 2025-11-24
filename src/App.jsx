@@ -13,6 +13,7 @@ function App() {
   const [prompt, setPrompt] = useState('');
   const [response, setResponse] = useState('Welcome! Ask me anything to get started.');
   const [isLoading, setIsLoading] = useState(false);
+  const [isPasted, setIsPasted] = useState(false);
 
   // Effect 1: Check for stored API key on initial load
   useEffect(() => {
@@ -57,6 +58,10 @@ function App() {
     setIsKeySaved(false);
   };
 
+  const handlePaste = () => {
+    setIsPasted(true);
+  };
+
   const handleKeyDown = (e) => {
     if ((e.key === 'Enter' && (e.metaKey || e.ctrlKey)) && !isLoading) {
       handleSubmit(e);
@@ -70,7 +75,7 @@ function App() {
     setResponse('');
 
     chrome.runtime.sendMessage(
-      { type: 'FETCH_GEMINI', prompt: prompt, model: modelName },
+      { type: 'FETCH_GEMINI', prompt: prompt, model: modelName, concise: isPasted },
       (apiResponse) => {
         if (apiResponse && apiResponse.success) {
           setResponse(apiResponse.text);
@@ -78,6 +83,7 @@ function App() {
           setResponse(`Error: ${apiResponse ? apiResponse.error : 'No response from background.'}`);
         }
         setIsLoading(false);
+        setIsPasted(false); // Reset flag after submission
       }
     );
   };
@@ -149,6 +155,7 @@ function App() {
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
+            onPaste={handlePaste}
             onKeyDown={handleKeyDown}
             placeholder="Ask anything... (Ctrl+Enter to send)"
             rows="4"
