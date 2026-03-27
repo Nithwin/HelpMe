@@ -100,10 +100,13 @@ body {
 
 /* --- API Key / Settings View --- */
 .settings-view {
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  padding: 24px;
+  justify-content: flex-start;
+  align-items: stretch;
+  text-align: left;
+  padding: 20px 24px;
+  gap: 8px;
+  overflow-y: auto;
+  max-height: 55%;
 }
 
 .settings-view h2 {
@@ -112,7 +115,7 @@ body {
 }
 
 /* --- General Interactive Elements (Inputs & Buttons) --- */
-input[type="password"], textarea {
+input[type="password"], input[type="text"], textarea, select {
   width: 100%;
   padding: 12px;
   /* keep inputs semi-transparent so host shows through */
@@ -126,8 +129,13 @@ input[type="password"], textarea {
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-input[type="password"]:focus, textarea:focus {
+input[type="password"]:focus, input[type="text"]:focus, textarea:focus, select:focus {
   outline: none;
+}
+
+.settings-view label {
+  font-size: 0.8rem;
+  opacity: 0.85;
 }
 
 button {

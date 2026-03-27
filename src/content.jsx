@@ -13,6 +13,8 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from '../src/App'; // Adjust path if your structure differs
 
+const extApi = globalThis.browser ?? globalThis.chrome;
+
 let container = null;
 let shadowRoot = null;
 const DEFAULTS = {
@@ -21,7 +23,7 @@ const DEFAULTS = {
 };
 
 // --- Command Listener ---
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+extApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.command) {
     case 'toggle-extension':
     case 'toggle-and-focus':
@@ -66,7 +68,7 @@ async function createUI() {
   container.id = 'gemini-shadow-container';
   document.body.appendChild(container);
 
-  const state = await chrome.storage.local.get(['position', 'isTransparent']);
+  const state = await extApi.storage.local.get(['position', 'isTransparent']);
   const currentPos = state.position || DEFAULTS.position;
   const isTransparent = state.isTransparent !== undefined ? state.isTransparent : DEFAULTS.isTransparent;
 
@@ -105,7 +107,7 @@ async function createUI() {
 
   const styleLink = document.createElement('link');
   styleLink.rel = 'stylesheet';
-  styleLink.href = chrome.runtime.getURL('assets/content.css');
+  styleLink.href = extApi.runtime.getURL('assets/content.css');
   shadowRoot.appendChild(styleLink);
   
   const appRoot = document.createElement('div');
@@ -130,13 +132,13 @@ function resetPosition() {
     left: DEFAULTS.position.left,
     right: DEFAULTS.position.right
   });
-  chrome.storage.local.set({ position: DEFAULTS.position });
+  extApi.storage.local.set({ position: DEFAULTS.position });
 }
 
 function toggleTransparency() {
     if (!container) return;
     const isTransparent = container.classList.toggle('is-transparent');
-    chrome.storage.local.set({ isTransparent });
+    extApi.storage.local.set({ isTransparent });
 }
 
 function makeDraggable(element, handle) {
@@ -170,7 +172,7 @@ function makeDraggable(element, handle) {
   function closeDragElement() {
     document.onmouseup = null;
     document.onmousemove = null;
-    chrome.storage.local.set({ 
+    extApi.storage.local.set({ 
         position: { top: element.style.top, left: element.style.left, right: null } 
     });
   }

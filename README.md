@@ -1,149 +1,123 @@
+# HelpMe - Practice Assistant Extension
 
-# HelpMe — Gemini Assistant Extension
+A browser extension built with React + Vite that injects an AI assistant into webpages for practice workflows.
 
-A small browser extension and demo built with React + Vite that injects an AI-powered assistant into web pages. The assistant uses your own Gemini API key to answer questions, clarify meanings, and provide inline explanations while you browse.
+## What is included
+- Multi-provider support: `Gemini`, `OpenRouter`, `Groq`
+- Per-provider API key + optional model setting
+- Low-token request pipeline:
+  - Compact mode-specific prompt templates
+  - Prompt whitespace compaction and input length limits
+  - Output token caps per mode (`direct`, `mcq`, `coding`)
+  - Deterministic generation params (`temperature: 0`, bounded `top_p`)
+- Answer modes:
+  - `Direct`: short final answer
+  - `MCQ`: one-line final option only
+  - `Coding`: formatted full solution in code blocks
+- Allowed-host safety guard:
+  - Requests are blocked unless the current page hostname is in your allowed list
+  - Default allowed hosts: `localhost`, `127.0.0.1`
 
-This README documents installation, usage, animation/UX notes, and contribution guidance.
-
-## Checklist (what this README covers)
-- Full project overview — Done
-- How to install and run locally — Done
-- How to set up and use your Gemini API key — Done
-- How to use the extension in the browser — Done
-- Animation and UI notes (where to edit) — Done
-- Files of interest and quick dev tips — Done
-- Contribution & troubleshooting notes — Done
-
-## Quick features
-- Live AI assistant overlay that responds to typed queries.
-- Inline lookup: select text on a page to ask the assistant for a definition or clarification.
-- Lightweight animated UI (CSS-based) for smooth appearance/disappearance.
-- Uses your Gemini API key so you keep control of billing and data.
-
-## Install (dev)
-1. Clone the repo and open the project folder.
-2. Install dependencies:
-
-```powershell
+## Install
+```bash
 npm install
 ```
 
-3. Run the dev server and load the extension in your browser (see "Run & Load in Browser").
-
-```powershell
-npm run dev
-```
-
-Notes:
-- This project uses Vite. If you have `npm run dev` configured, it will start a local dev server.
-
 ## Build
-To produce a production build (bundle static assets):
-
-```powershell
+```bash
 npm run build
 ```
 
-The built files are placed in the `dist/` folder by default (Vite config). Use them to pack the extension or host the web UI.
+## Load extension
+1. Open `chrome://extensions/` (or Edge/Brave equivalent).
+2. Enable `Developer mode`.
+3. Click `Load unpacked`.
+4. Select the `dist/` directory.
 
-## Gemini API setup
-This project expects you to provide your own Gemini API key. We follow the common Vite pattern using environment variables.
+Note: `public/` stores source assets and manifest template. Use `dist/` after running `npm run build`.
 
-1. Create a `.env` file in the repo root (not committed to Git):
+## Firefox support
+1. Build once: `npm run build`.
+2. Open `about:debugging#/runtime/this-firefox`.
+3. Click `Load Temporary Add-on...`.
+4. Select `/dist/manifest.json`.
 
-```text
-VITE_GEMINI_API_KEY=your_api_key_here
-VITE_GEMINI_API_URL=https://api.example.com/v1/gemini
+Note: for store publishing, package the extension from `dist/` and use the `browser_specific_settings.gecko` id in manifest.
+
+## First-time setup
+1. Open assistant UI with shortcut (`Ctrl+Space`) or extension command.
+2. Open `Settings`.
+3. Choose provider.
+4. Add API key for that provider.
+5. Optionally set model name.
+6. Set `Allowed Hosts` (comma-separated), for example: `localhost, 127.0.0.1`.
+7. Choose answer mode and click `Save Settings`.
+
+## Provider notes
+- Gemini endpoint: `generativelanguage.googleapis.com`
+- OpenRouter endpoint: `openrouter.ai/api/v1/chat/completions`
+- Groq endpoint: `api.groq.com/openai/v1/chat/completions`
+
+Host permissions are configured in `public/manifest.json`.
+
+## Main files
+- `src/App.jsx`: UI, settings state, request dispatch
+- `public/background.js`: provider routing, model fallback, prompt format policy, host guard
+- `src/content.jsx`: injected UI host and keyboard command handling
+- `public/manifest.json`: extension permissions, content script and command wiring
+
+## Architecture decision guide
+- Recommended now: keep this as a browser extension and migrate gradually to TypeScript.
+- Do not use C++ for this extension architecture; complexity is high and browser integration is poor.
+- Use Rust only if you are building a separate native app/service (not for the extension itself).
+
+### Option A: Extension (best immediate path)
+- Best for: in-browser workflows, quick updates, Chrome + Firefox portability.
+- Stack: React + TypeScript + extension APIs.
+- Pros: fastest iteration, easiest distribution, lowest maintenance overhead.
+- Cons: browser sandbox limits filesystem and native system access.
+
+### Option B: Extension + backend service (best scale path)
+- Best for: advanced orchestration, analytics, queueing, account features, stronger reliability.
+- Stack: current extension + Node/Rust backend API.
+- Pros: secure key handling, better observability, centralized policy control.
+- Cons: infra cost and backend ops required.
+
+### Option C: Desktop application (only when browser limits block you)
+- Best for: deep OS integration, multi-window workflows, offline datasets, heavy automation.
+- Stack options:
+  - `Tauri` (Rust + web UI): lightweight and performant.
+  - `Electron` (Node + web UI): faster dev, heavier runtime.
+- Pros: full system control and richer UX possibilities.
+- Cons: packaging/signing/update complexity and larger product scope.
+
+### Rust vs C++ vs JavaScript/TypeScript summary
+- JavaScript/TypeScript: best fit for extension logic and UI.
+- Rust: good for backend services or Tauri app core where performance/safety matter.
+- C++: usually not worth it here unless you have a very specific native-performance module.
+
+### Suggested roadmap
+1. Keep extension-first architecture.
+2. Migrate to TypeScript gradually (`allowJs`, `checkJs`).
+3. Add backend only when you need shared accounts, logs, or advanced policy.
+4. Move to desktop app only if browser APIs become the blocker.
+
+## TypeScript guidance
+- You do not need a full TypeScript migration right now to run cross-browser.
+- Recommended path:
+  1. Add `tsconfig.json` with `allowJs: true` and `checkJs: true` for gradual typing.
+  2. Convert `src/App.jsx` and `src/content.jsx` first.
+  3. Convert `public/background.js` last after provider types are stable.
+- This gives type safety without blocking delivery.
+
+## Quality checks
+```bash
+npm run lint
+npm run build
 ```
-
-2. Restart the dev server after adding the `.env` file so Vite picks up the variables.
-
-Security note: never commit your API key to source control. Use a secrets manager or CI environment variables for production.
-
-Implementation note: the UI calls a small client in `src/` that reads `import.meta.env.VITE_GEMINI_API_KEY` and sends requests to the configured endpoint.
-
-## How to use (in the browser)
-1. Run the dev server (`npm run dev`) or build (`npm run build`).
-2. Load the extension into your browser (Chrome/Edge/Brave):
-	 - Open the Extensions page (chrome://extensions/) and enable Developer mode.
-	 - Click "Load unpacked" and select the `public/` folder (or the `dist/` output for production).
-3. Open any web page. Click the extension icon and toggle the assistant, or select text and use the context action (if configured).
-4. Type a question in the assistant input. The assistant will send your query to the Gemini API and display a response inline.
-
-Usage tips:
-- Selecting text then opening the assistant will pre-fill the input with the selected text.
-- The assistant is intentionally lightweight: short prompts and follow-ups work best.
-
-## Animation & UI notes
-The assistant UI uses simple CSS transitions so it feels smooth without heavy JS animation frameworks.
-
-Where to edit animations:
-- `src/App.css` — main layout and animation utilities for the popup/overlay.
-- `src/content.css` — styles applied when the assistant is injected into a page. Look for classes named `.assistant`, `.assistant-enter`, and `.assistant-exit`.
-
-Common patterns used:
-- Fade + slide: opacity transition + transform translateY for entrance/exit.
-- Scale + ease for small popovers (use transform: scale(0.98) -> scale(1)).
-
-Quick example (already present in `src/content.css` — tweak these values):
-
-```css
-.assistant {
-	transition: opacity 180ms ease, transform 200ms cubic-bezier(.2,.9,.2,1);
-}
-.assistant-enter { opacity: 0; transform: translateY(6px) scale(0.99); }
-.assistant-enter-active { opacity: 1; transform: translateY(0) scale(1); }
-.assistant-exit { opacity: 1; transform: translateY(0); }
-.assistant-exit-active { opacity: 0; transform: translateY(6px); }
-```
-
-Edit timing and easing in `src/App.css` or `src/content.css` to customize the feel.
-
-## Files of interest
-- `src/content.jsx` — content script / injected UI logic.
-- `src/content.css` — styles for the in-page assistant.
-- `src/App.jsx` / `src/App.css` — main React app used for extension popup or demo UI.
-- `src/main.jsx` — Vite entry point.
-- `public/manifest.json` — extension manifest (permissions, content scripts, icons).
-- `public/background.js` — background script for extension event handling (if present).
-
-If you want to change the assistant's behavior, start in `src/content.jsx` where selected text is captured and requests are prepared.
-
-## Development contract (inputs/outputs)
-- Input: user query string, optional selected text, environment variable `VITE_GEMINI_API_KEY`.
-- Output: assistant text response (rendered HTML in the overlay), optional tooltips or follow-up suggestions.
-- Error modes: network/API errors, missing API key, rate limits — all surfaced in the UI as short messages.
-
-Edge cases to handle in code:
-- Empty queries — disable submit or show helpful hint.
-- Large responses — truncate with "show more" to avoid layout breakage.
-- Slow or failing API — show a retry button and a short timeout.
-
-## Testing & quality gates
-- Lint/types: run your project's linter and type checker (if added).
-- Quick smoke test: run dev server and open a page to confirm the assistant appears and responds to a simple query.
-
-## Contributing
-Contributions are welcome. Suggestions:
-- Improve animations or accessibility for keyboard users.
-- Add unit tests for request helpers and UI components.
-- Add an optional server-side proxy to keep the API key off the client (recommended for production).
-
-Please open an issue or a pull request with a clear title and description.
 
 ## Troubleshooting
-- No response from assistant: verify `VITE_GEMINI_API_KEY` and `VITE_GEMINI_API_URL` are set and valid.
-- Extension not loading: ensure you selected the correct folder (`public/` for dev, `dist/` for production) when using "Load unpacked".
-- Styles not applied: check that `content.css` is referenced in `manifest.json` as a content script or imported by the content entry.
-- Ctrl+Space / Command+Space not working: Some OS configurations reserve these keys (IME switch, Spotlight). The extension now includes a direct in-page fallback listener; try the shortcut again after focusing the page. If still blocked, customize the command in `chrome://extensions/shortcuts` (suggest "Ctrl+Shift+Space" or "Alt+Space").
-
-## License
-Add your preferred license here (e.g., MIT). This README does not change licensing; ensure you include a `LICENSE` file if you plan to open-source.
-
----
-
-If you'd like, I can also:
-- Add a short animated GIF or SVG demo into `public/` and reference it in this README.
-- Create a `.env.example` and a tiny helper that sends requests to Gemini using the Vite env variable.
-
-Tell me which of the above you'd like next and I'll implement it.
+- `Blocked on this site`: add current hostname to `Allowed Hosts` in settings.
+- `API key is not set`: add key for the selected provider.
+- `Model not found`: set a valid model name or leave model empty to use fallback defaults.
+- Shortcut conflict (`Ctrl+Space`): change shortcut in `chrome://extensions/shortcuts`.
