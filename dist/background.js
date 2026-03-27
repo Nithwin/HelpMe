@@ -10,10 +10,10 @@ ${r}
 Answer:`:t==="coding"?`${u}
 Problem (Coding):
 ${r}
-Full Source Code:`:/([A-D]\)|[1-4]\)|Option [A-D])/.test(r)?`${u}
+Full Source Code:`:/([A-Da-d][)\.]\s|Option\s*[A-D]|\n\s*[A-Da-d][)\.]|\n\s*\([A-Da-d]\)|\(a\)|\(b\)|\(c\)|\(d\))/m.test(r)?`${u}
 Question (MCQ):
 ${r}
-Answer:`:/(Write a program|function|class|algorithm|code|implementation|#include|<iostream>|def |public static void main|solve|write a script)/i.test(r)?`${u}
+Answer:`:/(write a (program|function|script|code)|#include\s*<|public static void main|int main\s*\(|def\s+\w+\s*\(|print\s*\(|System\.out|scanf|printf|implement a|write code)/i.test(r)?`${u}
 Problem (Coding):
 ${r}
 Code:`:`${u}

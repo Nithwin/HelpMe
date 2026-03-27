@@ -32,12 +32,12 @@ export function buildFinalPrompt(userInput: string, mode?: 'mcq' | 'coding' | 'g
     return `${SYSTEM_PROMPT}\nProblem (Coding):\n${trimmed}\nFull Source Code:`;
   }
 
-  // Detection logic for MCQ
-  const isMcq = /([A-D]\)|[1-4]\)|Option [A-D])/.test(trimmed);
+  // Detection logic for MCQ (broad: catches A) B) C) D), a. b. c., 1) 2) 3), Option A, etc.)
+  const isMcq = /([A-Da-d][)\.]\s|Option\s*[A-D]|\n\s*[A-Da-d][)\.]|\n\s*\([A-Da-d]\)|\(a\)|\(b\)|\(c\)|\(d\))/m.test(trimmed);
   if (isMcq) return `${SYSTEM_PROMPT}\nQuestion (MCQ):\n${trimmed}\nAnswer:`;
   
-  // Detection logic for Coding
-  const isCoding = /(Write a program|function|class|algorithm|code|implementation|#include|<iostream>|def |public static void main|solve|write a script)/i.test(trimmed);
+  // Detection logic for Coding (strict: only multi-word phrases to avoid false positives)
+  const isCoding = /(write a (program|function|script|code)|#include\s*<|public static void main|int main\s*\(|def\s+\w+\s*\(|print\s*\(|System\.out|scanf|printf|implement a|write code)/i.test(trimmed);
   if (isCoding) return `${SYSTEM_PROMPT}\nProblem (Coding):\n${trimmed}\nCode:`;
 
   return `${SYSTEM_PROMPT}\nQuestion:\n${trimmed}\nAnswer:`;
