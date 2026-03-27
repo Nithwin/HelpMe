@@ -42,6 +42,10 @@
     "toggle-and-focus": {
       "suggested_key": { "default": "Ctrl+Space", "mac": "Command+Space" },
       "description": "Show/Hide and focus the Assistant"
+    },
+    "ask-coding-auto": {
+      "suggested_key": { "default": "Alt+C", "mac": "Alt+C" },
+      "description": "Auto-fetch and paste code for coding question"
     }
   },
 

@@ -22,13 +22,17 @@ extApi.runtime.onMessage.addListener((request: any, sender: chrome.runtime.Messa
       break;
     case 'ask-selection':
     case 'ask-mcq-auto':
+    case 'ask-coding-auto':
       const selectionText = window.getSelection()?.toString().trim();
       if (selectionText) {
-        const isAutoSelect = request.command === 'ask-mcq-auto';
+        let mode: 'mcq' | 'coding' | 'general' = 'general';
+        if (request.command === 'ask-mcq-auto') mode = 'mcq';
+        else if (request.command === 'ask-coding-auto') mode = 'coding';
+
         toggleExtensionUI(true, 'open');
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('gemini-ask-selection', { 
-            detail: { text: selectionText, autoSelect: isAutoSelect } 
+            detail: { text: selectionText, mode } 
           }));
         }, 300);
       }
@@ -155,8 +159,43 @@ async function createUI() {
     });
   });
 
+  // Coding Auto-Paste Listener
+  window.addEventListener('gemini-paste-code', (e: any) => {
+    const code = e.detail;
+    if (!code) return;
+    autoPasteCode(code);
+  });
+
   enableSelectionBypass();
 }
+
+function autoPasteCode(code: string) {
+  // Strip markdown code blocks if present
+  const cleanCode = code.replace(/```[\w]*\n?|```/g, '').trim();
+  
+  // Find target: active element or best guess editor
+  let target = document.activeElement as HTMLElement;
+  
+  // If active is not a text input, search for the biggest textarea or editor
+  if (!(target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement || target.isContentEditable)) {
+    const editors = document.querySelectorAll('textarea, [contenteditable="true"], .ace_text-input, .monaco-mouse-cursor-text');
+    if (editors.length > 0) {
+      target = editors[0] as HTMLElement;
+    }
+  }
+
+  if (target) {
+    if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) {
+      target.value = cleanCode;
+      target.dispatchEvent(new Event('input', { bubbles: true }));
+      target.dispatchEvent(new Event('change', { bubbles: true }));
+    } else if (target.isContentEditable) {
+      target.innerText = cleanCode;
+      target.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }
+}
+
 
 function enableSelectionBypass() {
   const style = document.createElement('style');

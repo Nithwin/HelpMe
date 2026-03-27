@@ -72,11 +72,11 @@ function App() {
 
   useEffect(() => {
     const handleAskSelection = (e: Event) => {
-      const customEvent = e as CustomEvent<{ text: string; autoSelect: boolean }>;
-      const { text, autoSelect } = customEvent.detail;
+      const customEvent = e as CustomEvent<{ text: string; mode: 'mcq' | 'coding' | 'general' }>;
+      const { text, mode } = customEvent.detail;
       if (text) {
         setPrompt(text);
-        submitPrompt(text, autoSelect);
+        submitPrompt(text, mode);
       }
     };
 
@@ -108,7 +108,7 @@ function App() {
     });
   };
 
-  const submitPrompt = (textToSubmit: string, autoSelect = false) => {
+  const submitPrompt = (textToSubmit: string, mode: 'mcq' | 'coding' | 'general' = 'general') => {
     if (!textToSubmit.trim() || isLoading) return;
 
     setIsLoading(true);
@@ -118,11 +118,14 @@ function App() {
       type: 'FETCH_AI',
       provider,
       prompt: textToSubmit,
+      mode
     }).then((apiResponse: any) => {
       if (apiResponse?.success) {
         setResponse(apiResponse.text);
-        if (autoSelect) {
+        if (mode === 'mcq') {
           window.dispatchEvent(new CustomEvent('gemini-select-answer', { detail: apiResponse.text }));
+        } else if (mode === 'coding') {
+          window.dispatchEvent(new CustomEvent('gemini-paste-code', { detail: apiResponse.text }));
         }
       } else {
         setResponse(`Error: ${apiResponse?.error || 'No response from service worker.'}`);

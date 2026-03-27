@@ -42,6 +42,6 @@ export function buildFinalPrompt(userInput: string): string {
 }
 
 export function getOutputTokenLimit(prompt: string): number {
-  if (/(program|code|implementation|essay|explain)/i.test(prompt)) return 1024;
+  if (/(program|code|implementation|essay|explain|problem)/i.test(prompt)) return 2048;
   return 128;
 }

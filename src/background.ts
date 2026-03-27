@@ -76,7 +76,7 @@ extApi.runtime.onMessage.addListener((request: any, sender: chrome.runtime.Messa
 
       const provider = request.provider || storage.activeProvider || 'gemini';
       const rawPrompt = request.prompt || '';
-      const finalPrompt = buildFinalPrompt(rawPrompt);
+      const finalPrompt = buildFinalPrompt(rawPrompt, request.mode);
       const maxOutputTokens = getOutputTokenLimit(rawPrompt);
 
       if (!finalPrompt.trim()) {
