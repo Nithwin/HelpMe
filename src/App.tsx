@@ -70,16 +70,17 @@ function App() {
 
   useEffect(() => {
     const handleAskSelection = (e: Event) => {
-      const customEvent = e as CustomEvent<string>;
-      if (customEvent.detail) {
-        setPrompt(customEvent.detail);
-        submitPrompt(customEvent.detail);
+      const customEvent = e as CustomEvent<{ text: string; autoSelect: boolean }>;
+      const { text, autoSelect } = customEvent.detail;
+      if (text) {
+        setPrompt(text);
+        submitPrompt(text, autoSelect);
       }
     };
 
-    window.addEventListener('gemini-ask-selection', handleAskSelection);
+    window.addEventListener('gemini-ask-selection', handleAskSelection as EventListener);
     return () => {
-      window.removeEventListener('gemini-ask-selection', handleAskSelection);
+      window.removeEventListener('gemini-ask-selection', handleAskSelection as EventListener);
     };
   }, [provider]); // We need provider to be fresh
 
@@ -104,7 +105,7 @@ function App() {
     });
   };
 
-  const submitPrompt = (textToSubmit: string) => {
+  const submitPrompt = (textToSubmit: string, autoSelect = false) => {
     if (!textToSubmit.trim() || isLoading) return;
 
     setIsLoading(true);
@@ -117,6 +118,9 @@ function App() {
     }).then((apiResponse: any) => {
       if (apiResponse?.success) {
         setResponse(apiResponse.text);
+        if (autoSelect) {
+          window.dispatchEvent(new CustomEvent('gemini-select-answer', { detail: apiResponse.text }));
+        }
       } else {
         setResponse(`Error: ${apiResponse?.error || 'No response from service worker.'}`);
       }

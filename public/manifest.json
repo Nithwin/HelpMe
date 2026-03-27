@@ -35,6 +35,10 @@
       "suggested_key": { "default": "Alt+A", "mac": "Alt+A" },
       "description": "Ask AI about the selected text"
     },
+    "ask-mcq-auto": {
+      "suggested_key": { "default": "Alt+Q", "mac": "Alt+Q" },
+      "description": "Auto-select correct MCQ answer from selection"
+    },
     "toggle-and-focus": {
       "suggested_key": { "default": "Ctrl+Space", "mac": "Command+Space" },
       "description": "Show/Hide and focus the Assistant"

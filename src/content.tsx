@@ -21,11 +21,15 @@ extApi.runtime.onMessage.addListener((request: any, sender: chrome.runtime.Messa
       sendResponse({ status: "UI Toggled" });
       break;
     case 'ask-selection':
-      const text = window.getSelection()?.toString().trim();
-      if (text) {
+    case 'ask-mcq-auto':
+      const selectionText = window.getSelection()?.toString().trim();
+      if (selectionText) {
+        const isAutoSelect = request.command === 'ask-mcq-auto';
         toggleExtensionUI(true);
         setTimeout(() => {
-          window.dispatchEvent(new CustomEvent('gemini-ask-selection', { detail: text }));
+          window.dispatchEvent(new CustomEvent('gemini-ask-selection', { 
+            detail: { text: selectionText, autoSelect: isAutoSelect } 
+          }));
         }, 300);
       }
       sendResponse({ status: "Asking selection" });
@@ -132,6 +136,46 @@ async function createUI() {
   }, 500);
 
   window.addEventListener('reset-gemini-position', resetPosition);
+  
+  // MCQ Auto-Select Listener
+  window.addEventListener('gemini-select-answer', (e: any) => {
+    const answer = e.detail; // e.g. "A" or "Paris"
+    if (!answer) return;
+    autoClickAnswer(answer);
+  });
+}
+
+function autoClickAnswer(answer: string) {
+  const normalizedAnswer = answer.replace(/^[a-dA-D][),.]\s*/, '').trim().toLowerCase();
+  const letterMatch = answer.match(/^([a-dA-D])[),.]/);
+  const letter = letterMatch ? letterMatch[1].toUpperCase() : null;
+
+  // Search strategy 1: Radios/Checkboxes with labels
+  const inputs = document.querySelectorAll('input[type="radio"], input[type="checkbox"]');
+  for (const input of Array.from(inputs)) {
+    const label = document.querySelector(`label[for="${input.id}"]`) || input.closest('label');
+    if (label) {
+      const labelText = label.textContent?.trim().toLowerCase() || '';
+      if (normalizedAnswer && labelText.includes(normalizedAnswer)) {
+        (input as HTMLElement).click();
+        return;
+      }
+      if (letter && labelText.startsWith(letter)) {
+        (input as HTMLElement).click();
+        return;
+      }
+    }
+  }
+
+  // Search strategy 2: Divs/Buttons that look like options
+  const clickables = document.querySelectorAll('div, button, li, span');
+  for (const el of Array.from(clickables)) {
+    const text = el.textContent?.trim() || '';
+    if (text === answer || (normalizedAnswer && text.toLowerCase() === normalizedAnswer)) {
+      (el as HTMLElement).click();
+      return;
+    }
+  }
 }
 
 function resetPosition() {
