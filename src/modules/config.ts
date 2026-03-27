@@ -24,6 +24,10 @@ export function buildFinalPrompt(userInput: string, mode?: 'mcq' | 'coding' | 'g
   const trimmed = userInput.trim();
   if (!trimmed) return '';
   
+  if (mode === 'general') {
+    return `${SYSTEM_PROMPT}\nQuestion:\n${trimmed}\nAnswer:`;
+  }
+
   if (mode === 'mcq') {
     return `${SYSTEM_PROMPT}\nQuestion (MCQ):\n${trimmed}\nAnswer:`;
   }
