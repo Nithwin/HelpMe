@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Gemini Assistant",
-  "version": "1.2.1",
-  "description": "A quick-access assistant powered by the Gemini API",
+  "name": "HelpMe Assistant",
+  "version": "2.0.0",
+  "description": "Smart AI-powered exam assistant for MCQs, Coding, and Essays.",
   "permissions": ["storage", "activeTab", "scripting"],
   "host_permissions": [
     "https://generativelanguage.googleapis.com/*",
@@ -16,20 +16,28 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["assets/content.js"],
-      "css": ["assets/content.css"]
+      "js": ["assets/content-loader.js"]
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["assets/content.css", "assets/reset-icon.svg"],
+      "resources": [
+        "assets/*.js",
+        "assets/*.css",
+        "assets/*.svg",
+        "assets/*.png"
+      ],
       "matches": ["<all_urls>"]
     }
   ],
   "commands": {
+    "ask-selection": {
+      "suggested_key": { "default": "Alt+A", "mac": "Alt+A" },
+      "description": "Ask AI about the selected text"
+    },
     "toggle-and-focus": {
       "suggested_key": { "default": "Ctrl+Space", "mac": "Command+Space" },
-      "description": "Show/Hide and focus the Gemini Assistant"
+      "description": "Show/Hide and focus the Assistant"
     },
     "reset-chat": {
       "suggested_key": { "default": "Alt+R", "mac": "Alt+R" },
@@ -38,19 +46,10 @@
     "reset-position": {
       "suggested_key": { "default": "Alt+Shift+R", "mac": "Alt+Shift+R" },
       "description": "Reset window to default position"
-    },
-    "toggle-transparency": {
-      "suggested_key": { "default": "Alt+Shift+T", "mac": "Alt+Shift+T" },
-      "description": "Toggle window transparency"
     }
   },
   "action": {
-    "default_icon": { "16": "icon.png", "48": "icon.png", "128": "icon.png" }
-  },
-  "browser_specific_settings": {
-    "gecko": {
-      "id": "helpme-practice-assistant@example.com",
-      "strict_min_version": "121.0"
-    }
+    "default_icon": { "16": "icon.png", "48": "icon.png", "128": "icon.png" },
+    "default_popup": "index.html"
   }
 }

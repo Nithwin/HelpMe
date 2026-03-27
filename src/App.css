@@ -1,200 +1,263 @@
-/*
- * FILENAME: App.css
- * -----------------
- * Contains all styling for the React component.
- * This file defines the dark theme, layout, and modern aesthetic.
- */
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
-
 :root {
-  --font-family: 'Inter', sans-serif;
+  --primary: #555;
+  --secondary: #333;
+  --accent: #888;
+  --background: transparent;
+  --panel: transparent; /* Completely transparent */
+  --text: #ffffff;
+  --text-muted: #e2e8f0;
+  --glass-border: transparent;
 }
 
-body {
+* {
+  box-sizing: border-box;
   margin: 0;
-  font-family: var(--font-family);
-  background-color: transparent;
-}
-
-/* --- Main Container Layouts --- */
-.app-container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  width: 100%;
-  background-color: transparent; /* Allows transparency from host */
-  box-sizing: border-box;
-}
-
-.settings-view, .chat-view {
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-  height: 100%;
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* --- Header --- */
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-shrink: 0;
-  cursor: move; /* Indicates the header is draggable */
-  user-select: none; /* Prevents text selection while dragging */
-  padding: 16px 24px;
-  border-bottom: 1px solid;
-}
-
-.header h3 {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 700;
-}
-
-.header-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.icon-btn {
-  background: none;
-  border: none;
-  padding: 4px;
-  cursor: pointer;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.2s;
-}
-
-.icon-btn:hover {
-  background-color: transparent;
-}
-
-.icon-btn img {
-  width: 16px;
-  height: 16px;
-}
-
-.change-key-btn {
-  background: none;
-  border: 1px solid;
-  font-size: 0.8rem;
-  padding: 6px 12px;
-  border-radius: 6px;
-  transition: all 0.2s;
-}
-
-.change-key-btn:hover {
-  background-color: transparent;
-}
-
-/* --- API Key / Settings View --- */
-.settings-view {
-  justify-content: flex-start;
-  align-items: stretch;
-  text-align: left;
-  padding: 20px 24px;
-  gap: 8px;
-  overflow-y: auto;
-  max-height: 55%;
-}
-
-.settings-view h2 {
-  font-size: 1.4rem;
-  margin-bottom: 24px;
-}
-
-/* --- General Interactive Elements (Inputs & Buttons) --- */
-input[type="password"], input[type="text"], textarea, select {
-  width: 100%;
-  padding: 12px;
-  /* keep inputs semi-transparent so host shows through */
-  background-color: transparent;
-  border: 1px solid;
-  border-radius: 8px;
-  font-family: var(--font-family);
-  font-size: 1rem;
-  margin-bottom: 16px;
-  box-sizing: border-box;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-input[type="password"]:focus, input[type="text"]:focus, textarea:focus, select:focus {
-  outline: none;
-}
-
-.settings-view label {
-  font-size: 0.8rem;
-  opacity: 0.85;
-}
-
-button {
-  padding: 12px 20px;
-  border: none;
-  border-radius: 8px;
-  font-family: var(--font-family);
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-
-
-button:active {
-  transform: scale(0.98);
-}
-
-
-
-/* --- Chat View Specifics --- */
-.chat-view {
   padding: 0;
 }
 
-.response-area {
-  flex-grow: 1;
-  overflow-y: auto; /* Enables scrolling */
-  padding: 16px 24px;
-  font-size: 0.95rem;
-  line-height: 1.6;
-  white-space: pre-wrap;
-  word-wrap: break-word;
+body {
+  width: 400px;
+  height: 550px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: transparent;
+  color: var(--text);
+  overflow: hidden;
 }
 
-.response-area p {
-  margin-top: 0;
+.app-container {
+  width: 100%;
+  height: 100%;
+  padding: 8px;
+  background: transparent;
 }
 
-.response-area .loader {
+.glass-panel {
   display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: var(--panel);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+}
+
+.title-section h1 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.status-badge {
+  font-size: 0.65rem;
+  padding: 1px 6px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: #ccc;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.settings-toggle {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  filter: grayscale(1);
+  opacity: 0.7;
+}
+
+.app-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Chat Section */
+.chat-section {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 12px;
+}
+
+.response-container {
+  flex: 1;
+  background: transparent;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.response-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: transparent;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.response-text {
+  flex: 1;
+  padding: 10px;
+  overflow-y: auto;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: #eee;
+}
+
+.response-text pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.copy-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  color: #fff;
+  padding: 1px 6px;
+  cursor: pointer;
+  font-size: 0.65rem;
+}
+
+.prompt-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+textarea {
+  width: 100%;
+  height: 70px;
+  padding: 10px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  color: #fff;
+  resize: none;
+  font-family: inherit;
+  font-size: 0.85rem;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+button[type="submit"], .save-btn {
+  padding: 8px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+button[type="submit"]:hover, .save-btn:hover {
+  background: transparent;
+  border-color: #fff;
+}
+
+button:disabled {
+  opacity: 0.4;
+}
+
+/* Settings Section */
+.settings-section {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  margin: 10px 0;
+  padding-right: 4px;
+}
+
+.input-group {
+  margin-bottom: 12px;
+}
+
+label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+select, input[type="text"], input[type="password"] {
+  width: 100%;
+  padding: 8px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.85rem;
+}
+
+.provider-keys {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.key-entry {
+  padding: 10px;
+  background: transparent;
+  border-radius: 8px;
+  border: none;
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   height: 100%;
+  gap: 10px;
+  color: var(--text-muted);
 }
 
-
-
-
-.chat-view form {
-  display: flex;
-  flex-direction: column;
-  padding: 16px 24px;
-  border-top: 1px solid;
-  background-color: transparent;
-  flex-shrink: 0;
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
-.chat-view textarea {
-  resize: none;
-  margin-bottom: 12px;
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+::-webkit-scrollbar {
+  width: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
 }

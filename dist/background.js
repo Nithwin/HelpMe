@@ -1,123 +1,16 @@
-import { extApi, getLocalSettings } from './modules/runtime.js';
-import { buildFinalPrompt, getOutputTokenLimit } from './modules/config.js';
-import { getHostnameFromSender, isAllowedHost } from './modules/hosts.js';
-import { fetchGemini, fetchOpenRouter, fetchGroq } from './modules/providers.js';
-
-extApi.commands.onCommand.addListener(async (command) => {
-  try {
-    const tabs = await extApi.tabs.query({ active: true, currentWindow: true });
-    if (!tabs || !tabs[0]) {
-      return;
-    }
-
-    await extApi.tabs.sendMessage(tabs[0].id, { command });
-  } catch (error) {
-    const lastError = extApi.runtime?.lastError?.message;
-    if (lastError) {
-      console.warn(`Command delivery skipped: ${lastError}`);
-      return;
-    }
-    console.warn(`Command delivery failed: ${error?.message || 'Unknown error'}`);
-  }
-});
-
-function getProviderOrder(selectedProvider) {
-  return [selectedProvider, 'gemini', 'openrouter', 'groq'].filter(
-    (value, index, arr) => arr.indexOf(value) === index
-  );
-}
-
-async function callProvider(candidate, storage, request, finalPrompt, maxOutputTokens) {
-  if (candidate === 'openrouter') {
-    if (!storage.openRouterApiKey) {
-      return { success: false, error: 'OpenRouter API key is not set.' };
-    }
-
-    return fetchOpenRouter({
-      apiKey: storage.openRouterApiKey,
-      prompt: finalPrompt,
-      requestedModel: request.model || storage.openRouterModel,
-      maxOutputTokens,
-    });
-  }
-
-  if (candidate === 'groq') {
-    if (!storage.groqApiKey) {
-      return { success: false, error: 'Groq API key is not set.' };
-    }
-
-    return fetchGroq({
-      apiKey: storage.groqApiKey,
-      prompt: finalPrompt,
-      requestedModel: request.model || storage.groqModel,
-      maxOutputTokens,
-    });
-  }
-
-  if (!storage.geminiApiKey) {
-    return { success: false, error: 'Gemini API key is not set.' };
-  }
-
-  return fetchGemini({
-    apiKey: storage.geminiApiKey,
-    prompt: finalPrompt,
-    requestedModel: request.model || storage.geminiModel,
-    maxOutputTokens,
-  });
-}
-
-extApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.type !== 'FETCH_AI' && request.type !== 'FETCH_GEMINI') {
-    return false;
-  }
-
-  (async () => {
-    const storage = await getLocalSettings([
-      'activeProvider',
-      'answerMode',
-      'allowedHosts',
-      'geminiApiKey',
-      'geminiModel',
-      'openRouterApiKey',
-      'openRouterModel',
-      'groqApiKey',
-      'groqModel',
-    ]);
-
-    const hostname = getHostnameFromSender(sender);
-    if (!isAllowedHost(hostname, storage.allowedHosts)) {
-      sendResponse({
-        success: false,
-        error: 'Blocked on this site. Add this hostname in Allowed Hosts for practice use.',
-      });
-      return;
-    }
-
-    const provider = request.provider || storage.activeProvider || 'gemini';
-    const answerMode = request.answerMode || storage.answerMode || 'direct';
-    const finalPrompt = buildFinalPrompt(request.prompt || '', answerMode);
-    const maxOutputTokens = getOutputTokenLimit(answerMode);
-
-    if (!finalPrompt.trim()) {
-      sendResponse({ success: false, error: 'Prompt is empty.' });
-      return;
-    }
-
-    const providers = getProviderOrder(provider);
-    const errors = [];
-
-    for (const candidate of providers) {
-      const result = await callProvider(candidate, storage, request, finalPrompt, maxOutputTokens);
-      if (result.success) {
-        sendResponse({ ...result, provider: candidate });
-        return;
-      }
-
-      errors.push(`${candidate}: ${result.error}`);
-    }
-
-    sendResponse({ success: false, error: `All providers failed. ${errors.join(' | ')}` });
-  })();
-
-  return true;
-});
+const c=globalThis.browser??globalThis.chrome;async function y(t){return new Promise(e=>{c.storage.local.get(t,r=>{e(r||{})})})}const p={gemini:"gemini-2.0-flash",openrouter:"google/gemini-2.0-flash-001",groq:"llama-3.3-70b-versatile"},w=2e4,l=`You are a highly efficient exam assistant. 
+Rules:
+1. MCQ: Output ONLY the correct option and the answer text (e.g., "B) 42"). NO explanations.
+2. Coding: Provide ONLY the code in a single markdown block. NO preface/summary. Ensure clean formatting.
+3. Essay/Theory: Provide a concise, well-structured answer. Use bullet points for readability.
+4. General: Be extremely brief. Minimize token usage. No conversational filler ("Here is the answer...", "I hope this helps").
+`;function h(t){const e=t.trim();return e?/([A-D]\)|[1-4]\)|Option [A-D])/.test(e)?`${l}
+Question (MCQ):
+${e}
+Answer:`:/(Write a program|function|class|algorithm|code|implementation|#include|<iostream>|def |public static void main)/i.test(e)?`${l}
+Problem (Coding):
+${e}
+Code:`:`${l}
+Question:
+${e}
+Answer:`:""}function k(t){return/(program|code|implementation|essay|explain)/i.test(t)?1024:128}function x(t){if(t.url)try{return new URL(t.url).hostname}catch{return""}return""}function T(t,e=[]){return!0}const m=1;function b(t){return t===408||t===429||t>=500}function A(t){const e=String(t?.message||"").toLowerCase();return e.includes("timeout")||e.includes("aborted")||e.includes("network")}async function E(t,e,r=w){const o=new AbortController,s=setTimeout(()=>o.abort(),r);try{return await fetch(t,{...e,signal:o.signal})}finally{clearTimeout(s)}}async function f(t){let e=null;for(let r=0;r<=m;r+=1)try{const o=await t(E);if(o.ok)return{ok:!0,response:o};const s=await o.text();if(b(o.status)&&r<m)continue;return{ok:!1,status:o.status,errText:s}}catch(o){if(e=o,A(o)&&r<m)continue;return{ok:!1,networkError:o}}return{ok:!1,networkError:e||new Error("Unknown request failure")}}async function d(t,e){const r=await t.json();return e==="gemini"?r?.candidates?.[0]?.content?.parts?.[0]?.text:r?.choices?.[0]?.message?.content}async function P({apiKey:t,prompt:e,requestedModel:r,maxOutputTokens:o}){const n=(r?r.replace(/^models\//,""):"")||p.gemini,a=`https://generativelanguage.googleapis.com/v1beta/models/${n}:generateContent`,i=await f(u=>u(a,{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":t},body:JSON.stringify({contents:[{parts:[{text:e}]}],generationConfig:{temperature:0,topP:.8,maxOutputTokens:o}})}));return i.ok?{success:!0,text:await d(i.response,"gemini")||"No content returned.",model:n}:i.networkError?{success:!1,text:"",error:`Gemini network error: ${i.networkError.message}`}:{success:!1,text:"",error:`Gemini error ${i.status}: ${i.errText}`}}async function R({apiKey:t,prompt:e,requestedModel:r,maxOutputTokens:o}){const s=r||p.openrouter,n=await f(i=>i("https://openrouter.ai/api/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${t}`,"HTTP-Referer":"https://github.com/HelpMe","X-Title":"HelpMe Exam Portal Assistant"},body:JSON.stringify({model:s,messages:[{role:"user",content:e}],temperature:0,top_p:.8,max_tokens:o})}));return n.ok?{success:!0,text:await d(n.response,"openrouter")||"No content returned.",model:s}:n.networkError?{success:!1,text:"",error:`OpenRouter network error: ${n.networkError.message}`}:{success:!1,text:"",error:`OpenRouter error ${n.status}: ${n.errText}`}}async function O({apiKey:t,prompt:e,requestedModel:r,maxOutputTokens:o}){const s=r||p.groq,n=await f(i=>i("https://api.groq.com/openai/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${t}`},body:JSON.stringify({model:s,messages:[{role:"user",content:e}],temperature:0,top_p:.8,max_tokens:o})}));return n.ok?{success:!0,text:await d(n.response,"groq")||"No content returned.",model:s}:n.networkError?{success:!1,text:"",error:`Groq network error: ${n.networkError.message}`}:{success:!1,text:"",error:`Groq error ${n.status}: ${n.errText}`}}c.commands.onCommand.addListener(async t=>{try{const e=await c.tabs.query({active:!0,currentWindow:!0});if(!e||!e[0])return;await c.tabs.sendMessage(e[0].id,{command:t})}catch(e){const r=c.runtime?.lastError?.message;if(r){console.warn(`Command delivery skipped: ${r}`);return}console.warn(`Command delivery failed: ${e?.message||"Unknown error"}`)}});async function $(t,e,r,o,s){const n={apiKey:"",prompt:r,requestedModel:o,maxOutputTokens:s};return t==="openrouter"?e.openRouterApiKey?(n.apiKey=e.openRouterApiKey,R(n)):{success:!1,text:"",error:"OpenRouter API key is not set."}:t==="groq"?e.groqApiKey?(n.apiKey=e.groqApiKey,O(n)):{success:!1,text:"",error:"Groq API key is not set."}:e.geminiApiKey?(n.apiKey=e.geminiApiKey,P(n)):{success:!1,text:"",error:"Gemini API key is not set."}}c.runtime.onMessage.addListener((t,e,r)=>t.type!=="FETCH_AI"?!1:((async()=>{try{const o=await y(["activeProvider","allowedHosts","geminiApiKey","geminiModel","openRouterApiKey","openRouterModel","groqApiKey","groqModel"]),s=x(e);T(s,o.allowedHosts);const n=t.provider||o.activeProvider||"gemini",a=t.prompt||"",i=h(a),g=k(a);if(!i.trim()){r({success:!1,error:"Prompt is empty."});return}const u=await $(n,o,i,t.model||o[`${n}Model`],g);r(u)}catch(o){r({success:!1,error:o.message||"Internal background error"})}})(),!0));
