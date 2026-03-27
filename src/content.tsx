@@ -176,17 +176,20 @@ function autoPasteCode(code: string) {
   // Find target: active element or best guess editor
   let target = document.activeElement as HTMLElement;
   
+  const selectors = [
+    'textarea', 
+    '[contenteditable="true"]', 
+    '.ace_text-input', 
+    '.monaco-mouse-cursor-text', 
+    '.cm-content', 
+    '.inputarea',
+    '[role="textbox"]',
+    '.view-lines',
+    '.css-153p9ug' // Specific LeetCode editor
+  ];
+
   // If active is not a text input, search for the biggest textarea or editor
   if (!(target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement || target.isContentEditable)) {
-    const selectors = [
-      'textarea', 
-      '[contenteditable="true"]', 
-      '.ace_text-input', 
-      '.monaco-mouse-cursor-text', 
-      '.cm-content', 
-      '.inputarea',
-      '[role="textbox"]'
-    ];
     const editors = document.querySelectorAll(selectors.join(','));
     if (editors.length > 0) {
       target = editors[0] as HTMLElement;
@@ -194,6 +197,20 @@ function autoPasteCode(code: string) {
   }
 
   if (target) {
+    target.focus();
+    
+    // Strategy 1: execCommand (most reliable for rich editors)
+    try {
+      document.execCommand('insertText', false, cleanCode);
+      if (target.innerText.includes(cleanCode) || (target as any).value?.includes(cleanCode)) {
+        console.log('[HelpMe] Auto-paste success via execCommand');
+        return;
+      }
+    } catch (e) {
+      console.warn('[HelpMe] execCommand failed:', e);
+    }
+
+    // Strategy 2: Direct assignment + Events
     if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) {
       target.value = cleanCode;
       target.dispatchEvent(new Event('input', { bubbles: true }));
@@ -202,14 +219,15 @@ function autoPasteCode(code: string) {
       target.innerText = cleanCode;
       target.dispatchEvent(new Event('input', { bubbles: true }));
     }
+    
+    console.log('[HelpMe] Auto-paste success via direct assignment');
   }
 }
 
 
+
 function enableSelectionBypass() {
-  const style = document.createElement('style');
-  style.id = 'helpme-bypass-styles';
-  style.textContent = `
+  const css = `
     * {
       -webkit-user-select: text !important;
       -moz-user-select: text !important;
@@ -217,18 +235,34 @@ function enableSelectionBypass() {
       user-select: text !important;
     }
   `;
+  const style = document.createElement('style');
+  style.id = 'helpme-bypass-styles';
+  style.textContent = css;
   document.documentElement.appendChild(style);
 
-  const protectorEvents = ['copy', 'cut', 'paste', 'selectstart', 'contextmenu'];
+  // Advanced: Stop sites from overriding copy/contextmenu
+  const protectorEvents = ['copy', 'cut', 'paste', 'selectstart', 'contextmenu', 'dragstart'];
+  
+  const preventBlocking = (e: Event) => {
+    // Check if the event was triggered inside our assistant
+    const isExtensionTarget = container && container.contains(e.target as Node);
+    
+    // If it's a site event and it's being blocked, stop the block
+    if (!isExtensionTarget) {
+      e.stopImmediatePropagation();
+    }
+  };
+
   protectorEvents.forEach(eventType => {
-    window.addEventListener(eventType, (e) => {
-      const isTargetAssistant = container && container.contains(e.target as Node);
-      if (!isTargetAssistant) {
-        e.stopImmediatePropagation();
-      }
-    }, true);
+    window.addEventListener(eventType, preventBlocking, true);
+    document.addEventListener(eventType, preventBlocking, true);
   });
+
+  // Force-unlock text selection properties
+  Object.defineProperty(document, 'oncopy', { get: () => null, set: () => {}, configurable: true });
+  Object.defineProperty(document, 'oncontextmenu', { get: () => null, set: () => {}, configurable: true });
 }
+
 
 
 function autoClickAnswer(answer: string) {
