@@ -154,39 +154,93 @@ async function createUI() {
       setTimeout(() => autoClickAnswer(answer), waitTime);
     });
   });
+
+  enableSelectionBypass();
 }
 
+function enableSelectionBypass() {
+  const style = document.createElement('style');
+  style.id = 'helpme-bypass-styles';
+  style.textContent = `
+    * {
+      -webkit-user-select: text !important;
+      -moz-user-select: text !important;
+      -ms-user-select: text !important;
+      user-select: text !important;
+    }
+  `;
+  document.documentElement.appendChild(style);
+
+  const protectorEvents = ['copy', 'cut', 'paste', 'selectstart', 'contextmenu', 'mousedown', 'mouseup'];
+  protectorEvents.forEach(eventType => {
+    window.addEventListener(eventType, (e) => {
+      // Allow helpme interactions to pass through if they are blocked by site scripts
+      e.stopImmediatePropagation();
+    }, true);
+  });
+}
+
+
 function autoClickAnswer(answer: string) {
-  const normalizedAnswer = answer.replace(/^[a-dA-D][),.]\s*/, '').trim().toLowerCase();
+  const norm = answer.trim().toLowerCase();
+  const cleanAnswer = norm.replace(/^[a-da-d][),.]\s*/, '').trim();
   const letterMatch = answer.match(/^([a-dA-D])[),.]/);
   const letter = letterMatch ? letterMatch[1].toUpperCase() : null;
 
-  // Search strategy 1: Radios/Checkboxes with labels
-  const inputs = document.querySelectorAll('input[type="radio"], input[type="checkbox"]');
-  for (const input of Array.from(inputs)) {
-    const label = document.querySelector(`label[for="${input.id}"]`) || input.closest('label');
-    if (label) {
-      const labelText = label.textContent?.trim().toLowerCase() || '';
-      if (normalizedAnswer && labelText.includes(normalizedAnswer)) {
-        (input as HTMLElement).click();
+  console.log('[HelpMe] Attempting auto-click for:', { answer, cleanAnswer, letter });
+
+  // 1. Precise Letter/Text Match in Labels/Buttons
+  const allElements = document.querySelectorAll('button, input, label, div, span, li, a, [role="button"], [role="radio"]');
+  
+  for (const el of Array.from(allElements)) {
+    const element = el as HTMLElement;
+    const text = element.textContent?.trim() || '';
+    const val = (element as HTMLInputElement).value || '';
+    
+    // Check for radio/checkbox inputs specifically first
+    if (element instanceof HTMLInputElement && (element.type === 'radio' || element.type === 'checkbox')) {
+      const parentLabel = element.closest('label');
+      const associatedLabel = document.querySelector(`label[for="${element.id}"]`);
+      const labelText = (parentLabel?.textContent || associatedLabel?.textContent || '').trim().toLowerCase();
+      
+      if (cleanAnswer && labelText.includes(cleanAnswer)) {
+        element.click();
         return;
       }
-      if (letter && labelText.startsWith(letter)) {
-        (input as HTMLElement).click();
+      if (letter && (labelText.startsWith(letter) || labelText.includes(`${letter}.`) || labelText.includes(`${letter})`))) {
+        element.click();
+        return;
+      }
+    }
+
+    // Check generic text-based clickable elements
+    const elementText = text.toLowerCase();
+    if (cleanAnswer && elementText === cleanAnswer) {
+      element.click();
+      return;
+    }
+    
+    if (letter) {
+      const regex = new RegExp(`^${letter}[\\.\\)\\s]`, 'i');
+      if (regex.test(text)) {
+        element.click();
         return;
       }
     }
   }
 
-  // Search strategy 2: Divs/Buttons that look like options
-  const clickables = document.querySelectorAll('div, button, li, span');
-  for (const el of Array.from(clickables)) {
-    const text = el.textContent?.trim() || '';
-    if (text === answer || (normalizedAnswer && text.toLowerCase() === normalizedAnswer)) {
-      (el as HTMLElement).click();
+  // 2. Deep Heuristic Search
+  for (const el of Array.from(allElements)) {
+    const element = el as HTMLElement;
+    const text = (element.innerText || element.textContent || '').trim().toLowerCase();
+    if (cleanAnswer && text.length > 0 && cleanAnswer.includes(text) && text.length > 3) {
+      element.click();
       return;
     }
   }
+
+  // 3. Fallback: Search for SVG/Canvas containers (Simulated click on center of matched text)
+  // Note: Canvas is difficult without OCR coordinates, but we can try reaching for containers
 }
 
 function resetPosition() {
