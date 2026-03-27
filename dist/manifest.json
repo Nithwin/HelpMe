@@ -43,15 +43,8 @@
       "suggested_key": { "default": "Ctrl+Space", "mac": "Command+Space" },
       "description": "Show/Hide and focus the Assistant"
     },
-    "reset-chat": {
-      "suggested_key": { "default": "Alt+R", "mac": "Alt+R" },
-      "description": "Reset the chat input"
-    },
-    "reset-position": {
-      "suggested_key": { "default": "Alt+Shift+R", "mac": "Alt+Shift+R" },
-      "description": "Reset window to default position"
-    }
   },
+
   "action": {
     "default_icon": { "16": "icon.png", "48": "icon.png", "128": "icon.png" },
     "default_popup": "index.html"
