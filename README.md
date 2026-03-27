@@ -1,30 +1,28 @@
-# HelpMe Assistant v2.0.0
+# HelpMe Assistant v2.0.1 💎
 
 A premium, smart AI-powered assistant designed for exam portals. It provides instant, concise answers for MCQs, well-formatted solutions for coding problems, and structured essays.
 
-## 🚀 Features
+## 🚀 v2.0.0 Features (Modernized)
 
-- **Smart Multi-Provider Support**: Switch seamlessly between **Gemini**, **OpenRouter**, and **Groq**.
-- **Context-Aware Prompting**: Automatically detects question types (MCQ, Coding, Essay) to provide the most relevant format without extra filler.
-- **Premium UI**: Modern glassmorphism design with a draggable interface and quick-access shortcuts.
-- **Privacy First**: Practice mode settings to control which hostnames the assistant can run on.
-- **Token Efficient**: Optimized system prompts to minimize API costs and improve speed.
+- **Selection & Copy Bypass**: Force-enables right-click, text selection, and copy-paste on all websites. Bypasses proctoring restrictions. 🔓
+- **MCQ Auto-Select (Alt+Q)**: Automatically identifies and clicks the correct answer on the page with human-like 1-3s delay. 🎯
+- **Coding Auto-Paste (Alt+C)**: Instantly fetches and injects full code solutions into complex editors (Monaco, CodeMirror, Ace). 💻
+- **Instant Ask (Alt+A)**: Get the answer to any highlighted text without typing.
+- **Pure Transparent UI**: 100% transparent glassmorphism for a stealthy and unobtrusive experience.
+- **Multi-Provider AI**: Unified support for **Gemini**, **OpenRouter**, and **Groq** with intelligent fallback.
 
 ## 🛠️ Installation
 
-1. Clone or download this repository.
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Build the extension:
-   ```bash
-   npm run build
-   ```
-4. Load the extension in your browser:
-   - Open Chrome and navigate to `chrome://extensions/`.
-   - Enable **Developer mode** (top right).
-   - Click **Load unpacked** and select the `dist` folder.
+1. Install dependencies: `npm install`
+2. Build: `npm run build`
+3. Load the `dist/` folder in Chrome via `chrome://extensions/` (Developer Mode).
+
+## ⌨️ Shortcuts
+
+- `Ctrl + Space`: **Toggle** Assistant panel (Show/Hide).
+- `Alt + A`: **Ask AI** about the currently selected text.
+- `Alt + Q`: **Auto-Select MCQ** answer from selection.
+- `Alt + C`: **Auto-Paste Code** for selected problem.
 
 ## ⚙️ Configuration
 
@@ -32,20 +30,13 @@ A premium, smart AI-powered assistant designed for exam portals. It provides ins
 2. Click the **Settings (⚙️)** icon.
 3. Choose your preferred **AI Provider**.
 4. Enter your **API Key** (stored securely in local storage).
-5. (Optional) Add specific **Allowed Hostnames** for practice use.
-
-## ⌨️ Shortcuts
-
-- `Ctrl + Space`: Toggle Assistant panel and focus input.
-- `Alt + R`: Reset chat input.
-- `Alt + Shift + R`: Reset panel position.
-- `Ctrl + Enter`: Send current prompt.
 
 ## 📝 Usage
 
-- **MCQs**: Just copy and paste the question with options. The AI will return ONLY the correct option.
-- **Coding**: Paste the problem statement. The AI will return the code in a clean markdown block.
-- **Essays**: Paste the prompt. The AI will provide a concise, structured response.
+- **Stealth Mode**: Use `Ctrl + Space` to quickly hide or show the assistant.
+- **MCQs**: Highlight question + options, press `Alt + Q`. The AI will click the right answer for you.
+- **Coding**: Highlight the problem, press `Alt + C`. The AI will paste the code directly into the editor.
+- **Bypass**: All websites will automatically have text-selection and right-click enabled when the extension is active.
 
 ---
-Developed with absolute focus on efficiency and user experience.
+Developed for maximum efficiency and absolute performance.
