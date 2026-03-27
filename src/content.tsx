@@ -178,7 +178,16 @@ function autoPasteCode(code: string) {
   
   // If active is not a text input, search for the biggest textarea or editor
   if (!(target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement || target.isContentEditable)) {
-    const editors = document.querySelectorAll('textarea, [contenteditable="true"], .ace_text-input, .monaco-mouse-cursor-text');
+    const selectors = [
+      'textarea', 
+      '[contenteditable="true"]', 
+      '.ace_text-input', 
+      '.monaco-mouse-cursor-text', 
+      '.cm-content', 
+      '.inputarea',
+      '[role="textbox"]'
+    ];
+    const editors = document.querySelectorAll(selectors.join(','));
     if (editors.length > 0) {
       target = editors[0] as HTMLElement;
     }
@@ -210,11 +219,13 @@ function enableSelectionBypass() {
   `;
   document.documentElement.appendChild(style);
 
-  const protectorEvents = ['copy', 'cut', 'paste', 'selectstart', 'contextmenu', 'mousedown', 'mouseup'];
+  const protectorEvents = ['copy', 'cut', 'paste', 'selectstart', 'contextmenu'];
   protectorEvents.forEach(eventType => {
     window.addEventListener(eventType, (e) => {
-      // Allow helpme interactions to pass through if they are blocked by site scripts
-      e.stopImmediatePropagation();
+      const isTargetAssistant = container && container.contains(e.target as Node);
+      if (!isTargetAssistant) {
+        e.stopImmediatePropagation();
+      }
     }, true);
   });
 }
