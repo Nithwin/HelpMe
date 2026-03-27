@@ -46,6 +46,7 @@ function App() {
   const [geminiApiKey, setGeminiApiKey] = useState('');
   const [openRouterApiKey, setOpenRouterApiKey] = useState('');
   const [groqApiKey, setGroqApiKey] = useState('');
+  const [autoDelay, setAutoDelay] = useState(true);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -60,6 +61,7 @@ function App() {
       setGeminiApiKey(result.geminiApiKey || '');
       setOpenRouterApiKey(result.openRouterApiKey || '');
       setGroqApiKey(result.groqApiKey || '');
+      if (result.autoDelay !== undefined) setAutoDelay(result.autoDelay);
 
       const hasAnyKey = !!(result.geminiApiKey || result.openRouterApiKey || result.groqApiKey);
       if (!hasAnyKey) setShowSettings(true);
@@ -99,6 +101,7 @@ function App() {
       geminiApiKey: geminiApiKey.trim(),
       openRouterApiKey: openRouterApiKey.trim(),
       groqApiKey: groqApiKey.trim(),
+      autoDelay: autoDelay,
     }).then(() => {
       setResponse('Settings saved.');
       setShowSettings(false);
@@ -197,6 +200,17 @@ function App() {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              <div className="input-group checkbox-group">
+                <label>
+                  <input 
+                    type="checkbox" 
+                    checked={autoDelay} 
+                    onChange={(e) => setAutoDelay(e.target.checked)} 
+                  />
+                  Human-like Delay (1-3s) for Auto-Select
+                </label>
               </div>
 
               <button className="save-btn" onClick={handleSaveSettings}>Save & Close</button>

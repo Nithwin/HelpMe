@@ -25,7 +25,7 @@ extApi.runtime.onMessage.addListener((request: any, sender: chrome.runtime.Messa
       const selectionText = window.getSelection()?.toString().trim();
       if (selectionText) {
         const isAutoSelect = request.command === 'ask-mcq-auto';
-        toggleExtensionUI(true);
+        toggleExtensionUI(true, 'open');
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('gemini-ask-selection', { 
             detail: { text: selectionText, autoSelect: isAutoSelect } 
@@ -51,8 +51,9 @@ extApi.runtime.onMessage.addListener((request: any, sender: chrome.runtime.Messa
 });
 
 // --- UI Management ---
-function toggleExtensionUI(focusInput = false) {
+function toggleExtensionUI(focusInput = false, forceState: 'open' | 'close' | 'toggle' = 'toggle') {
   if (!container) {
+    if (forceState === 'close') return;
     createUI().then(() => {
       if (focusInput && shadowRoot) {
         setTimeout(() => (shadowRoot!.querySelector('textarea') as HTMLTextAreaElement)?.focus(), 150);
@@ -60,8 +61,14 @@ function toggleExtensionUI(focusInput = false) {
     });
   } else {
     const isVisible = container.style.display === 'block';
-    container.style.display = isVisible ? 'none' : 'block';
-    if (!isVisible && focusInput && shadowRoot) {
+    let shouldBeVisible = !isVisible;
+    
+    if (forceState === 'open') shouldBeVisible = true;
+    else if (forceState === 'close') shouldBeVisible = false;
+
+    container.style.display = shouldBeVisible ? 'block' : 'none';
+    
+    if (shouldBeVisible && focusInput && shadowRoot) {
       setTimeout(() => (shadowRoot!.querySelector('textarea') as HTMLTextAreaElement)?.focus(), 150);
     }
   }
@@ -141,7 +148,11 @@ async function createUI() {
   window.addEventListener('gemini-select-answer', (e: any) => {
     const answer = e.detail; // e.g. "A" or "Paris"
     if (!answer) return;
-    autoClickAnswer(answer);
+    
+    extApi.storage.local.get(['autoDelay']).then((res: { autoDelay?: boolean }) => {
+      const waitTime = (res.autoDelay !== false) ? Math.floor(Math.random() * 2000) + 1000 : 0;
+      setTimeout(() => autoClickAnswer(answer), waitTime);
+    });
   });
 }
 
@@ -235,13 +246,15 @@ function makeDraggable(element: HTMLElement, handle: HTMLElement) {
 if (!(window as any).__helpMeShortcutAdded) {
   (window as any).__helpMeShortcutAdded = true;
   window.addEventListener('keydown', (e) => {
-    if (shadowRoot && shadowRoot.contains(e.target as Node)) return;
-    if (e.repeat) return;
     const ctrlOrMeta = e.ctrlKey || e.metaKey;
     const spacePressed = (e.code === 'Space') || (e.key === ' ') || (e.keyCode === 32);
+    
     if (ctrlOrMeta && spacePressed) {
+      if (shadowRoot && shadowRoot.contains(e.target as Node)) {
+        // Toggle even if focused inside
+      }
       e.preventDefault();
-      toggleExtensionUI(true);
+      toggleExtensionUI(true, 'toggle');
     }
   }, true);
 }

@@ -42,7 +42,7 @@
     "toggle-and-focus": {
       "suggested_key": { "default": "Ctrl+Space", "mac": "Command+Space" },
       "description": "Show/Hide and focus the Assistant"
-    },
+    }
   },
 
   "action": {
