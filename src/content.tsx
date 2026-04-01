@@ -210,17 +210,37 @@ function autoPasteCode(code: string) {
       console.warn('[HelpMe] execCommand failed:', e);
     }
 
-    // Strategy 2: Direct assignment + Events
-    if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) {
-      target.value = cleanCode;
-      target.dispatchEvent(new Event('input', { bubbles: true }));
-      target.dispatchEvent(new Event('change', { bubbles: true }));
-    } else if (target.isContentEditable) {
-      target.innerText = cleanCode;
-      target.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-    
-    console.log('[HelpMe] Auto-paste success via direct assignment');
+    // Strategy 2: Simulate typing (for editors that block paste/execCommand)
+    const simulateTyping = async (text: string, element: HTMLElement) => {
+      console.log('[HelpMe] Simulating typing...');
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const keyCode = char.charCodeAt(0);
+        
+        element.dispatchEvent(new KeyboardEvent('keydown', { key: char, keyCode, bubbles: true }));
+        element.dispatchEvent(new KeyboardEvent('keypress', { key: char, keyCode, bubbles: true }));
+        
+        if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
+          element.value += char;
+          element.dispatchEvent(new Event('input', { bubbles: true }));
+        } else if (element.isContentEditable) {
+           element.innerText += char;
+           element.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        element.dispatchEvent(new KeyboardEvent('keyup', { key: char, keyCode, bubbles: true }));
+        
+        // Add a tiny delay to mimic typing and allow React/editors to process the event
+        await new Promise(r => setTimeout(r, 10)); 
+      }
+      
+      if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      console.log('[HelpMe] Typing simulation complete');
+    };
+
+    simulateTyping(cleanCode, target);
   }
 }
 
