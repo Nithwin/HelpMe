@@ -210,7 +210,16 @@ function autoPasteCode(code: string) {
       console.warn('[HelpMe] execCommand failed:', e);
     }
 
-    // Strategy 2: Synthetic Paste Event (Best for Monaco/CodeMirror like Leetcode)
+    // Strategy 2: Direct assignment for known editor textareas (Monaco/CodeMirror)
+    if (target.classList.contains('inputarea') || target.classList.contains('monaco-mouse-cursor-text')) {
+      (target as HTMLTextAreaElement).value = cleanCode;
+      target.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+      target.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+      console.log('[HelpMe] Auto-paste success via Monaco/CodeMirror direct assignment');
+      return;
+    }
+
+    // Strategy 3: Synthetic Paste Event (Best fallback for complex editors)
     try {
       const pasteEvent = new ClipboardEvent('paste', {
         bubbles: true,
@@ -219,49 +228,22 @@ function autoPasteCode(code: string) {
       });
       pasteEvent.clipboardData?.setData('text/plain', cleanCode);
       target.dispatchEvent(pasteEvent);
-      console.log('[HelpMe] Auto-paste triggered via ClipboardEvent');
+      console.log('[HelpMe] Auto-paste triggered via ClipboardEvent (paste)');
     } catch (e) {
       console.warn('[HelpMe] ClipboardEvent failed:', e);
     }
 
-    // Strategy 3: Simulate typing (Fallback for input/textarea)
-    const simulateTyping = async (text: string, element: HTMLElement) => {
-      console.log('[HelpMe] Simulating typing...');
-      
-      // For Monaco/CodeMirror, if there's a hidden textarea, we just set its value and dispatch input
-      if (element.classList.contains('inputarea') || element.classList.contains('monaco-mouse-cursor-text')) {
-        (element as HTMLTextAreaElement).value = text;
-        element.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
-        element.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
-        return;
-      }
-
-      for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        const keyCode = char.charCodeAt(0);
-        
-        element.dispatchEvent(new KeyboardEvent('keydown', { key: char, keyCode, bubbles: true }));
-        element.dispatchEvent(new KeyboardEvent('keypress', { key: char, keyCode, bubbles: true }));
-        
-        if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
-          element.value += char;
-          element.dispatchEvent(new Event('input', { bubbles: true }));
-        } else if (element.isContentEditable) {
-           element.innerText += char;
-           element.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-
-        element.dispatchEvent(new KeyboardEvent('keyup', { key: char, keyCode, bubbles: true }));
-        await new Promise(r => setTimeout(r, 2)); // ultra-fast typing
-      }
-      
-      if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
-        element.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-      console.log('[HelpMe] Typing simulation complete');
-    };
-
-    simulateTyping(cleanCode, target);
+    // Strategy 4: Fallback for standard input/textarea
+    if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) {
+      target.value = cleanCode;
+      target.dispatchEvent(new Event('input', { bubbles: true }));
+      target.dispatchEvent(new Event('change', { bubbles: true }));
+      console.log('[HelpMe] Auto-paste success via standard direct assignment');
+    } else if (target.isContentEditable) {
+      target.innerText = cleanCode;
+      target.dispatchEvent(new Event('input', { bubbles: true }));
+      console.log('[HelpMe] Auto-paste success via ContentEditable assignment');
+    }
   }
 }
 
