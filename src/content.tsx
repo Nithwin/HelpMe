@@ -210,9 +210,32 @@ function autoPasteCode(code: string) {
       console.warn('[HelpMe] execCommand failed:', e);
     }
 
-    // Strategy 2: Simulate typing (for editors that block paste/execCommand)
+    // Strategy 2: Synthetic Paste Event (Best for Monaco/CodeMirror like Leetcode)
+    try {
+      const pasteEvent = new ClipboardEvent('paste', {
+        bubbles: true,
+        cancelable: true,
+        clipboardData: new DataTransfer()
+      });
+      pasteEvent.clipboardData?.setData('text/plain', cleanCode);
+      target.dispatchEvent(pasteEvent);
+      console.log('[HelpMe] Auto-paste triggered via ClipboardEvent');
+    } catch (e) {
+      console.warn('[HelpMe] ClipboardEvent failed:', e);
+    }
+
+    // Strategy 3: Simulate typing (Fallback for input/textarea)
     const simulateTyping = async (text: string, element: HTMLElement) => {
       console.log('[HelpMe] Simulating typing...');
+      
+      // For Monaco/CodeMirror, if there's a hidden textarea, we just set its value and dispatch input
+      if (element.classList.contains('inputarea') || element.classList.contains('monaco-mouse-cursor-text')) {
+        (element as HTMLTextAreaElement).value = text;
+        element.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+        element.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+        return;
+      }
+
       for (let i = 0; i < text.length; i++) {
         const char = text[i];
         const keyCode = char.charCodeAt(0);
@@ -229,9 +252,7 @@ function autoPasteCode(code: string) {
         }
 
         element.dispatchEvent(new KeyboardEvent('keyup', { key: char, keyCode, bubbles: true }));
-        
-        // Add a tiny delay to mimic typing and allow React/editors to process the event
-        await new Promise(r => setTimeout(r, 10)); 
+        await new Promise(r => setTimeout(r, 2)); // ultra-fast typing
       }
       
       if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
