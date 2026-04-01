@@ -159,17 +159,33 @@ async function createUI() {
     });
   });
 
-  // Coding Auto-Paste Listener
-  window.addEventListener('gemini-paste-code', (e: any) => {
+  let latestCodeSolution = '';
+
+  // Coding Store Listener (from Alt+C)
+  window.addEventListener('gemini-store-code', (e: any) => {
     const code = e.detail;
     if (!code) return;
-    autoPasteCode(code);
+    latestCodeSolution = code;
+    console.log('[HelpMe] Code solution stored. Press Alt+V to stealth type it.');
   });
+
+  // Stealth Typing Trigger (Alt+V)
+  window.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.altKey && e.code === 'KeyV') {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (latestCodeSolution) {
+        stealthTypeCode(latestCodeSolution);
+      } else {
+        console.warn('[HelpMe] No code stored. Press Alt+C first.');
+      }
+    }
+  }, true);
 
   enableSelectionBypass();
 }
 
-function autoPasteCode(code: string) {
+async function stealthTypeCode(code: string) {
   // Strip markdown code blocks if present
   const cleanCode = code.replace(/```[\w]*\n?|```/g, '').trim();
   
@@ -196,55 +212,76 @@ function autoPasteCode(code: string) {
     }
   }
 
-  if (target) {
-    target.focus();
+  if (!target) {
+     console.warn('[HelpMe] No suitable editor found for stealth typing.');
+     return;
+  }
+
+  target.focus();
+  console.log('[HelpMe] Simulating stealth human typing...');
+
+  // The actual simulation engine
+  const lines = cleanCode.split('\n');
+  
+  for (let l = 0; l < lines.length; l++) {
+    const line = lines[l];
     
-    // Strategy 1: execCommand (most reliable for rich editors)
-    try {
-      document.execCommand('insertText', false, cleanCode);
-      if (target.innerText.includes(cleanCode) || (target as any).value?.includes(cleanCode)) {
-        console.log('[HelpMe] Auto-paste success via execCommand');
-        return;
+    // Type characters one by one
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      const keyCode = char.charCodeAt(0);
+      
+      const keydown = new KeyboardEvent('keydown', { key: char, code: `Key${char.toUpperCase()}`, keyCode, bubbles: true, cancelable: true });
+      const keypress = new KeyboardEvent('keypress', { key: char, code: `Key${char.toUpperCase()}`, keyCode, bubbles: true, cancelable: true });
+      const keyup = new KeyboardEvent('keyup', { key: char, code: `Key${char.toUpperCase()}`, keyCode, bubbles: true, cancelable: true });
+      
+      target.dispatchEvent(keydown);
+      target.dispatchEvent(keypress);
+      
+      // Inject the actual value
+      if (document.execCommand('insertText', false, char)) {
+        // execCommand handled it
+      } else if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) {
+        target.value += char;
+        target.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+      } else if (target.isContentEditable) {
+         target.innerText += char;
+         target.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
       }
-    } catch (e) {
-      console.warn('[HelpMe] execCommand failed:', e);
-    }
 
-    // Strategy 2: Direct assignment for known editor textareas (Monaco/CodeMirror)
-    if (target.classList.contains('inputarea') || target.classList.contains('monaco-mouse-cursor-text')) {
-      (target as HTMLTextAreaElement).value = cleanCode;
-      target.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
-      target.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
-      console.log('[HelpMe] Auto-paste success via Monaco/CodeMirror direct assignment');
-      return;
+      target.dispatchEvent(keyup);
+      
+      // Random delay between 15ms and 60ms for human-like speed
+      const delay = Math.floor(Math.random() * 45) + 15;
+      await new Promise(r => setTimeout(r, delay));
     }
-
-    // Strategy 3: Synthetic Paste Event (Best fallback for complex editors)
-    try {
-      const pasteEvent = new ClipboardEvent('paste', {
-        bubbles: true,
-        cancelable: true,
-        clipboardData: new DataTransfer()
-      });
-      pasteEvent.clipboardData?.setData('text/plain', cleanCode);
-      target.dispatchEvent(pasteEvent);
-      console.log('[HelpMe] Auto-paste triggered via ClipboardEvent (paste)');
-    } catch (e) {
-      console.warn('[HelpMe] ClipboardEvent failed:', e);
-    }
-
-    // Strategy 4: Fallback for standard input/textarea
-    if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) {
-      target.value = cleanCode;
-      target.dispatchEvent(new Event('input', { bubbles: true }));
-      target.dispatchEvent(new Event('change', { bubbles: true }));
-      console.log('[HelpMe] Auto-paste success via standard direct assignment');
-    } else if (target.isContentEditable) {
-      target.innerText = cleanCode;
-      target.dispatchEvent(new Event('input', { bubbles: true }));
-      console.log('[HelpMe] Auto-paste success via ContentEditable assignment');
+    
+    // Simulate pressing "Enter" at the end of a line (if not the last line)
+    if (l < lines.length - 1) {
+      target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }));
+      target.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }));
+      
+      if (!document.execCommand('insertText', false, '\n')) {
+        if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) {
+           target.value += '\n';
+           target.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+        }
+      }
+      
+      target.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }));
+      
+      // Slightly longer delay when jumping to a new line
+      const lineDelay = Math.floor(Math.random() * 150) + 50;
+      await new Promise(r => setTimeout(r, lineDelay));
     }
   }
+
+  // Final confirmation event
+  if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) {
+    target.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  
+  console.log('[HelpMe] Stealth typing simulation complete!');
 }
 
 

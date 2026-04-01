@@ -125,7 +125,7 @@ function App() {
         if (mode === 'mcq') {
           window.dispatchEvent(new CustomEvent('gemini-select-answer', { detail: apiResponse.text }));
         } else if (mode === 'coding') {
-          window.dispatchEvent(new CustomEvent('gemini-paste-code', { detail: apiResponse.text }));
+          window.dispatchEvent(new CustomEvent('gemini-store-code', { detail: apiResponse.text }));
         }
       } else {
         setResponse(`Error: ${apiResponse?.error || 'No response from service worker.'}`);
