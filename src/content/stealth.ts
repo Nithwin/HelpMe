@@ -1,22 +1,41 @@
 export async function stealthTypeCode(code: string) {
+  // 1. Strip markdown code blocks if present
   const cleanCode = code.replace(/```[\w]*\n?|```/g, '').trim();
+  
+  // 2. Find target: active element or best guess editor
   let target = document.activeElement as HTMLElement;
   
   const selectors = [
-    'textarea', '[contenteditable="true"]', '.ace_text-input', 
-    '.monaco-mouse-cursor-text', '.cm-content', '.inputarea',
-    '[role="textbox"]', '.view-lines', '.css-153p9ug'
+    'textarea.inputarea', // Monaco (LeetCode/HackerRank)
+    'textarea', 
+    '[contenteditable="true"]', 
+    '.ace_text-input', 
+    '.cm-content', 
+    '.inputarea',
+    '[role="textbox"]',
+    '.view-lines',
+    '.css-153p9ug' // Specific LeetCode editor wrapper
   ];
 
+  // If active is not a valid text-entry element, search for the biggest textarea or editor
   if (!(target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement || target.isContentEditable)) {
-    const editors = document.querySelectorAll(selectors.join(','));
-    if (editors.length > 0) target = editors[0] as HTMLElement;
+    for (const sel of selectors) {
+      const el = document.querySelector(sel);
+      if (el) {
+        target = el as HTMLElement;
+        break;
+      }
+    }
   }
 
-  if (!target) return;
+  if (!target) {
+     console.warn('[ExamPilot] No suitable editor found for stealth typing.');
+     return;
+  }
+
   target.focus();
 
-  // ShadowCode Placeholder Detection
+  // 3. ShadowCode Placeholder Detection & Selection
   const PLACEHOLDER = 'shadowcode';
   let hasPlaceholder = false;
 
@@ -28,7 +47,6 @@ export async function stealthTypeCode(code: string) {
         hasPlaceholder = true;
      }
   } else if (target.isContentEditable) {
-     // For contentEditable, we need to find the text node containing the placeholder
      const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, null);
      let node;
      while (node = walker.nextNode()) {
@@ -46,65 +64,95 @@ export async function stealthTypeCode(code: string) {
      }
   }
 
-  console.log(`[ExamPilot] Stealth typing (ShadowCode: ${hasPlaceholder})...`);
+  console.log(`[ExamPilot] 🚀 Executing Ultimate Stealth Typing (Placeholder: ${hasPlaceholder})...`);
 
+  // 4. Typing Loop
   const lines = cleanCode.split('\n');
+  
   for (let l = 0; l < lines.length; l++) {
     const line = lines[l];
+    
     for (let i = 0; i < line.length; i++) {
       const char = line[i];
       const keyCode = char.charCodeAt(0);
       
-      const keydown = new KeyboardEvent('keydown', { key: char, code: `Key${char.toUpperCase()}`, keyCode, bubbles: true, cancelable: true });
-      const keypress = new KeyboardEvent('keypress', { key: char, code: `Key${char.toUpperCase()}`, keyCode, bubbles: true, cancelable: true });
-      const keyup = new KeyboardEvent('keyup', { key: char, code: `Key${char.toUpperCase()}`, keyCode, bubbles: true, cancelable: true });
+      // A. Keyboard Event Simulation (The "Stealth" layer)
+      const commonConfig = { key: char, code: `Key${char.toUpperCase()}`, keyCode, bubbles: true, cancelable: true };
+      target.dispatchEvent(new KeyboardEvent('keydown', commonConfig));
+      target.dispatchEvent(new KeyboardEvent('keypress', commonConfig));
       
-      target.dispatchEvent(keydown);
-      target.dispatchEvent(keypress);
-      
-      if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) {
-        const start = target.selectionStart || 0;
-        const end = target.selectionEnd || 0;
-        target.setRangeText(char, start, end, 'end');
-        target.dispatchEvent(new Event('input', { bubbles: true }));
-      } else if (target.isContentEditable) {
-        const sel = window.getSelection();
-        if (sel && sel.rangeCount > 0) {
-          const range = sel.getRangeAt(0);
-          range.deleteContents();
-          const textNode = document.createTextNode(char);
-          range.insertNode(textNode);
-          range.setStartAfter(textNode);
-          range.setEndAfter(textNode);
-          sel.removeAllRanges();
-          sel.addRange(range);
-          target.dispatchEvent(new Event('input', { bubbles: true }));
+      // B. Multi-Layer Injection (The "Workhorse" layer)
+      let injected = false;
+
+      // Layer 1: Native Inserter (Best for compatibility)
+      try {
+        if (document.execCommand('insertText', false, char)) {
+          injected = true;
+        } else if (document.execCommand('insertHTML', false, char)) {
+          injected = true;
+        }
+      } catch (e) { /* ignore */ }
+
+      // Layer 2: Selection/Range Fallback
+      if (!injected) {
+        if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) {
+          const start = target.selectionStart || 0;
+          const end = target.selectionEnd || 0;
+          target.setRangeText(char, start, end, 'end');
+          injected = true;
+        } else if (target.isContentEditable) {
+          const sel = window.getSelection();
+          if (sel && sel.rangeCount > 0) {
+            const range = sel.getRangeAt(0);
+            range.deleteContents();
+            const textNode = document.createTextNode(char);
+            range.insertNode(textNode);
+            range.setStartAfter(textNode);
+            range.setEndAfter(textNode);
+            sel.removeAllRanges();
+            sel.addRange(range);
+            injected = true;
+          }
         }
       }
 
-      target.dispatchEvent(keyup);
+      // C. Change/Input Event Simulation (The "Reactive" layer)
+      // Dispatched even if Layer 1/2 succeeded to trigger React/Vue listeners
+      target.dispatchEvent(new InputEvent('beforeinput', { data: char, inputType: 'insertText', bubbles: true, cancelable: true }));
+      target.dispatchEvent(new InputEvent('input', { data: char, inputType: 'insertText', bubbles: true }));
+      target.dispatchEvent(new KeyboardEvent('keyup', commonConfig));
+
+      // Human-like speed: 15ms - 60ms
       await new Promise(r => setTimeout(r, Math.floor(Math.random() * 45) + 15));
     }
     
+    // Line-break handling
     if (l < lines.length - 1) {
       target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }));
-      target.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }));
       
-      if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) {
-        const start = target.selectionStart || 0;
-        const end = target.selectionEnd || 0;
-        target.setRangeText('\n', start, end, 'end');
-        target.dispatchEvent(new Event('input', { bubbles: true }));
-      } else if (target.isContentEditable) {
-         document.execCommand('insertLineBreak');
+      let newlineInjected = false;
+      try {
+        if (document.execCommand('insertLineBreak')) newlineInjected = true;
+        else if (document.execCommand('insertText', false, '\n')) newlineInjected = true;
+      } catch (e) { /* ignore */ }
+
+      if (!newlineInjected) {
+        if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) {
+          const start = target.selectionStart || 0;
+          const end = target.selectionEnd || 0;
+          target.setRangeText('\n', start, end, 'end');
+        }
       }
       
-      target.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }));
+      target.dispatchEvent(new InputEvent('input', { data: '\n', inputType: 'insertLineBreak', bubbles: true }));
+      target.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
+      
+      // Longer delay for new lines
       await new Promise(r => setTimeout(r, Math.floor(Math.random() * 150) + 50));
     }
   }
 
-  if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) {
-    target.dispatchEvent(new Event('change', { bubbles: true }));
-  }
+  // Final change event to ensure data sync
+  target.dispatchEvent(new Event('change', { bubbles: true }));
+  console.log('[ExamPilot] ✅ Stealth typing cycle complete!');
 }
