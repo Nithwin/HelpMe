@@ -170,18 +170,40 @@ async function createUI(initialDisplay: 'block' | 'none' = 'block') {
   }
 
   function clickNextButton() {
-     const buttons = document.querySelectorAll('button, a, input[type="submit"], input[type="button"], div[role="button"]');
+     console.log('[ExamPilot] Searching for Next button...');
+     const buttons = document.querySelectorAll('button, a, input[type="submit"], input[type="button"], div[role="button"], span[role="button"]');
+     
+     // 1. Prioritize buttons with clear "Next" text or common "Next" classes
+     const nextKeywords = ['next', 'next >', 'save & next', 'submit and next', 'continue', 'proceed', 'finish', 'submit answer', '→'];
+     
      for (const btn of Array.from(buttons)) {
         const element = btn as HTMLElement;
-        // Also grab title or aria-label for SVG buttons
         const text = (element.textContent || (element as HTMLInputElement).value || element.getAttribute('aria-label') || element.title || '').trim().toLowerCase();
-        if (text === 'next' || text === 'next >' || text.includes('save & next') || text === 'submit and next' || text === 'continue' || element.classList.contains('next-btn')) {
-            console.log('[ExamPilot] Clicking Next Button:', btn);
+        
+        const isNext = nextKeywords.some(kw => text === kw || (kw.length > 3 && text.includes(kw)));
+        const hasNextClass = Array.from(element.classList).some(c => c.toLowerCase().includes('next') || c.toLowerCase().includes('btn-primary'));
+
+        if (isNext || hasNextClass) {
+            console.log('[ExamPilot] ✅ Found Next Button:', element);
             element.click();
             return true;
         }
      }
-     console.warn('[ExamPilot] No Next Button found.');
+     
+     // 2. Secondary: Search for icons/SVG that might be "Next"
+     const svgs = document.querySelectorAll('svg');
+     for (const svg of Array.from(svgs)) {
+        const parent = svg.parentElement;
+        if (parent && (parent.tagName === 'BUTTON' || parent.getAttribute('role') === 'button')) {
+           const label = parent.getAttribute('aria-label') || '';
+           if (label.toLowerCase().includes('next')) {
+              parent.click();
+              return true;
+           }
+        }
+     }
+
+     console.warn('[ExamPilot] ❌ No Next Button found.');
      return false;
   }
 
@@ -391,73 +413,97 @@ function enableSelectionBypass() {
 
 function autoClickAnswer(answer: string) {
   const norm = answer.trim().toLowerCase();
-  const cleanAnswer = norm.replace(/^[a-da-d][),.]\s*/, '').trim();
-  const letterMatch = answer.match(/^([a-dA-D])[),.]/);
-  const letter = letterMatch ? letterMatch[1].toUpperCase() : null;
-
-  console.log('[HelpMe] Attempting auto-click for:', { answer, cleanAnswer, letter });
-
-  // 1. Precise Letter/Text Match in Labels/Buttons
-  const allElements = document.querySelectorAll('button, input, label, div, span, li, a, [role="button"], [role="radio"]');
   
+  // 1. Extract Letter and Clean Answer Text
+  // Matches "A) Monkey", "A. Monkey", "(A) Monkey", or just "A"
+  const letterMatch = answer.match(/^\(?([a-dA-D])[\s\)\.]/i) || answer.match(/^([a-dA-D])$/i);
+  const letter = letterMatch ? letterMatch[1].toUpperCase() : null;
+  
+  // Strip off prefixes like "A) " or "Answer: " to get just the text
+  let cleanAnswer = norm.replace(/^(answer:?\s*)?\(?[a-d][\s\)\.]{1,2}/i, '').trim();
+  
+  // If the answer was just "A", cleanAnswer might be empty or "a"
+  if (cleanAnswer.toLowerCase() === letter?.toLowerCase()) cleanAnswer = '';
+
+  console.log('[ExamPilot] Auto-Click Debug:', { original: answer, letter, cleanAnswer });
+
+  // 2. Scan all potentially clickable elements
+  const allElements = document.querySelectorAll('button, input, label, div, span, li, a, [role="button"], [role="radio"]');
   let fallbackLetterElement: HTMLElement | null = null;
   
   for (const el of Array.from(allElements)) {
     const element = el as HTMLElement;
-    const text = element.textContent?.trim() || '';
-    const val = (element as HTMLInputElement).value || '';
+    const text = (element.textContent || (element as HTMLInputElement).value || '').trim();
+    const elementText = text.toLowerCase();
     
-    // Check for radio/checkbox inputs specifically first
+    // Check for radio/checkbox inputs specifically
     if (element instanceof HTMLInputElement && (element.type === 'radio' || element.type === 'checkbox')) {
       const parentLabel = element.closest('label');
       const associatedLabel = document.querySelector(`label[for="${element.id}"]`);
       const labelText = (parentLabel?.textContent || associatedLabel?.textContent || '').trim().toLowerCase();
       
-      if (cleanAnswer && labelText.includes(cleanAnswer)) {
+      // Try matching by the actual text first
+      if (cleanAnswer && labelText.includes(cleanAnswer) && cleanAnswer.length > 2) {
+        console.log('[ExamPilot] Match by label text:', labelText);
         element.click();
         return;
       }
-      if (letter && (labelText.startsWith(letter) || labelText.includes(`${letter}.`) || labelText.includes(`${letter})`))) {
-        element.click();
-        return;
-      }
-      if (letter && labelText === letter.toLowerCase()) {
-        if (!fallbackLetterElement) fallbackLetterElement = element;
+      // Try matching by letter prefix in label
+      if (letter && (labelText.startsWith(letter.toLowerCase()) || labelText.includes(`${letter.toLowerCase()}.`) || labelText.includes(`${letter.toLowerCase()})`))) {
+         console.log('[ExamPilot] Match by letter in label:', labelText);
+         element.click();
+         return;
       }
     }
 
-    // Check generic text-based clickable elements
-    const elementText = text.toLowerCase();
+    // Try matching generic clickable elements by exact text
     if (cleanAnswer && elementText === cleanAnswer) {
+      console.log('[ExamPilot] Match by exact text:', elementText);
       element.click();
       return;
     }
     
+    // Track detached letter buttons (buttons whose only text is "A", "B", etc.)
     if (letter) {
-      const regex = new RegExp(`^${letter}[\\.\\)\\s]`, 'i');
-      if (regex.test(text)) {
+      const isDetachedLetter = elementText === letter.toLowerCase() || 
+                               elementText === `${letter.toLowerCase()}.` || 
+                               elementText === `${letter.toLowerCase()})` ||
+                               elementText === `(${letter.toLowerCase()})`;
+      
+      if (isDetachedLetter) {
+        // Prefer explicit buttons/inputs over generic divs
+        const isClickableTag = ['BUTTON', 'INPUT', 'LABEL', 'LI', 'A'].includes(element.tagName);
+        if (isClickableTag || !fallbackLetterElement) {
+           fallbackLetterElement = element;
+        }
+      }
+      
+      // Regex match for "A) Some Text" inside a button
+      const prefixRegex = new RegExp(`^\\(?${letter}[\\.\\)\\s]`, 'i');
+      if (prefixRegex.test(text)) {
+        console.log('[ExamPilot] Match by letter prefix regex:', text);
         element.click();
         return;
       }
-      if (elementText === letter.toLowerCase() && (element.tagName === 'DIV' || element.tagName === 'SPAN' || element.tagName === 'BUTTON' || element.tagName === 'LI')) {
-        if (!fallbackLetterElement) fallbackLetterElement = element;
+    }
+  }
+
+  // 3. Deep Heuristic Content Match (If text is at least 4 chars long)
+  if (cleanAnswer && cleanAnswer.length > 3) {
+    for (const el of Array.from(allElements)) {
+      const element = el as HTMLElement;
+      const text = (element.innerText || element.textContent || '').trim().toLowerCase();
+      if (text.includes(cleanAnswer) || cleanAnswer.includes(text)) {
+         console.log('[ExamPilot] Heuristic match:', text);
+         element.click();
+         return;
       }
     }
   }
 
-  // 2. Deep Heuristic Search
-  for (const el of Array.from(allElements)) {
-    const element = el as HTMLElement;
-    const text = (element.innerText || element.textContent || '').trim().toLowerCase();
-    if (cleanAnswer && text.length > 0 && cleanAnswer.includes(text) && text.length > 3) {
-      element.click();
-      return;
-    }
-  }
-
-  // 3. Fallback: Exact Single Letter Detached Match
+  // 4. Fallback: Click the detached letter element if found
   if (fallbackLetterElement) {
-    console.log('[HelpMe] Using detached exact-letter fallback for auto-click');
+    console.log('[ExamPilot] Detached letter fallback click:', fallbackLetterElement.textContent);
     fallbackLetterElement.click();
     return;
   }
