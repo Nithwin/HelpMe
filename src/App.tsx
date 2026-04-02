@@ -50,7 +50,8 @@ function App() {
 
   useEffect(() => {
     const loadSettings = async () => {
-      const result = await extApi.storage.local.get([
+      const storage = extApi.storage.sync || extApi.storage.local;
+      const result = await storage.get([
         'activeProvider',
         'geminiApiKey',
         'openRouterApiKey',
@@ -96,7 +97,8 @@ function App() {
   }, [provider, geminiApiKey, openRouterApiKey, groqApiKey]);
 
   const handleSaveSettings = () => {
-    extApi.storage.local.set({
+    const storage = extApi.storage.sync || extApi.storage.local;
+    storage.set({
       activeProvider: provider,
       geminiApiKey: geminiApiKey.trim(),
       openRouterApiKey: openRouterApiKey.trim(),
@@ -160,7 +162,7 @@ function App() {
       <div className="glass-panel">
         <header className="app-header">
           <div className="title-section">
-            <h1>HelpMe</h1>
+            <h1>ExamPilot</h1>
           </div>
           <button 
             className={`settings-toggle ${showSettings ? 'active' : ''}`}

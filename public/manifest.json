@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "HelpMe Assistant",
-  "version": "2.0.0",
-  "description": "Smart AI-powered exam assistant for MCQs, Coding, and Essays.",
+  "name": "ExamPilot Assistant",
+  "version": "2.1.0",
+  "description": "Smart, undetectable AI-powered Autopilot exam assistant.",
   "permissions": ["storage", "activeTab", "scripting"],
   "host_permissions": [
     "https://generativelanguage.googleapis.com/*",

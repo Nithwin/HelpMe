@@ -1,42 +1,24 @@
-# HelpMe Assistant v2.0.1 💎
+# ExamPilot Assistant ✈️🧠
 
-A premium, smart AI-powered assistant designed for exam portals. It provides instant, concise answers for MCQs, well-formatted solutions for coding problems, and structured essays.
+ExamPilot is the ultimate stealth AI-powered browser extension designed to effortlessly solve MCQs and coding challenges on restricted platforms. It utilizes native UI simulation and autonomous looping to provide a seamless hands-free experience.
 
-## 🚀 v2.0.0 Features (Modernized)
+## ✨ Features
+- **Autopilot Loop (`Alt+Z`)**: Enable a fully autonomous loop that scans the page, solves the MCQ, selects the option, and clicks the Next button repeatedly until you manually stop it.
+- **Stealth Auto-Paste (`Alt+C` then `Alt+V`)**: Instantly injects AI-generated code directly into complex virtualized editors (like Monaco, Ace, CodeMirror) preventing proctoring protections natively from detecting standard clipboard operations.
+- **Selection Unblocker**: Fully overrides site restrictions, allowing you to highlight, select, right-click, and copy text freely, no matter the portal.
+- **Persistent Multi-API Backend**: Easily switch between Gemini, OpenRouter, and Groq right from the interface. API Keys are safely synced to your browser account allowing them to persist gracefully if the extension is uninstalled.
 
-- **Selection & Copy Bypass**: Force-enables right-click, text selection, and copy-paste on all websites. Bypasses proctoring restrictions. 🔓
-- **MCQ Auto-Select (Alt+Q)**: Automatically identifies and clicks the correct answer on the page with human-like 1-3s delay. 🎯
-- **Coding Auto-Paste (Alt+C)**: Instantly fetches and injects full code solutions into complex editors (Monaco, CodeMirror, Ace). 💻
-- **Instant Ask (Alt+A)**: Get the answer to any highlighted text without typing.
-- **Pure Transparent UI**: 100% transparent glassmorphism for a stealthy and unobtrusive experience.
-- **Multi-Provider AI**: Unified support for **Gemini**, **OpenRouter**, and **Groq** with intelligent fallback.
+## 🚀 Shortcuts Reference
+- `Ctrl + Space` (Mac: `Cmd + Space`): Open the manual assistant popup.
+- `Alt + Z`: Toggle **Autopilot** mode On/Off.
+- `Alt + C`: Store the answer for a Coding Question.
+- `Alt + V`: Inject the **Stored Code** stealthily into the active editor.
+- `Alt + Q`: Ask AI to select an MCQ answer silently.
+- `Alt + A`: Ask the AI manually about selected text.
 
-## 🛠️ Installation
-
-1. Install dependencies: `npm install`
-2. Build: `npm run build`
-3. Load the `dist/` folder in Chrome via `chrome://extensions/` (Developer Mode).
-
-## ⌨️ Shortcuts
-
-- `Ctrl + Space`: **Toggle** Assistant panel (Show/Hide).
-- `Alt + A`: **Ask AI** about the currently selected text.
-- `Alt + Q`: **Auto-Select MCQ** answer from selection.
-- `Alt + C`: **Auto-Paste Code** for selected problem.
-
-## ⚙️ Configuration
-
-1. Click the extension icon or use `Ctrl+Space` to open the panel.
-2. Click the **Settings (⚙️)** icon.
-3. Choose your preferred **AI Provider**.
-4. Enter your **API Key** (stored securely in local storage).
-
-## 📝 Usage
-
-- **Stealth Mode**: Use `Ctrl + Space` to quickly hide or show the assistant.
-- **MCQs**: Highlight question + options, press `Alt + Q`. The AI will click the right answer for you.
-- **Coding**: Highlight the problem, press `Alt + C`. The AI will paste the code directly into the editor.
-- **Bypass**: All websites will automatically have text-selection and right-click enabled when the extension is active.
-
----
-Developed for maximum efficiency and absolute performance.
+## 📦 Installation
+1. Run `npm install` followed by `npm run build`.
+2. Open your chromium-based browser and navigate to `chrome://extensions/`.
+3. Enable **Developer mode**.
+4. Click **Load unpacked** and select the `/dist` directory within this project.
+5. In the loaded extension menu, enter your preferred API key and begin passing exams automatically!

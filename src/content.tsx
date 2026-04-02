@@ -89,7 +89,8 @@ async function createUI(initialDisplay: 'block' | 'none' = 'block') {
   container.id = 'helpme-shadow-container';
   document.body.appendChild(container);
 
-  const state = await extApi.storage.local.get(['position', 'isTransparent']);
+  const storage = extApi.storage.sync || extApi.storage.local;
+  const state = await storage.get(['position', 'isTransparent']);
   const currentPos = state.position || DEFAULTS.position;
   const isTransparent = state.isTransparent !== undefined ? state.isTransparent : DEFAULTS.isTransparent;
 
@@ -154,18 +155,63 @@ async function createUI(initialDisplay: 'block' | 'none' = 'block') {
 
   window.addEventListener('reset-gemini-position', resetPosition);
   
+  let latestCodeSolution = '';
+  let autopilotActive = false;
+
+  async function startAutopilotLoop() {
+      if (!autopilotActive) return;
+      console.log('[ExamPilot] Autopilot Loop: Extracting question text...');
+      
+      const mainContentText = document.body.innerText;
+      
+      window.dispatchEvent(new CustomEvent('gemini-ask-selection', { 
+         detail: { text: mainContentText, mode: 'mcq' } 
+      }));
+  }
+
+  function clickNextButton() {
+     const buttons = document.querySelectorAll('button, a, input[type="submit"], input[type="button"], div[role="button"]');
+     for (const btn of Array.from(buttons)) {
+        const element = btn as HTMLElement;
+        // Also grab title or aria-label for SVG buttons
+        const text = (element.textContent || (element as HTMLInputElement).value || element.getAttribute('aria-label') || element.title || '').trim().toLowerCase();
+        if (text === 'next' || text === 'next >' || text.includes('save & next') || text === 'submit and next' || text === 'continue' || element.classList.contains('next-btn')) {
+            console.log('[ExamPilot] Clicking Next Button:', btn);
+            element.click();
+            return true;
+        }
+     }
+     console.warn('[ExamPilot] No Next Button found.');
+     return false;
+  }
+
   // MCQ Auto-Select Listener
   window.addEventListener('gemini-select-answer', (e: any) => {
     const answer = e.detail; // e.g. "A" or "Paris"
     if (!answer) return;
     
-    extApi.storage.local.get(['autoDelay']).then((res: { autoDelay?: boolean }) => {
+    const storage = extApi.storage.sync || extApi.storage.local;
+    storage.get(['autoDelay']).then((res: { autoDelay?: boolean }) => {
       const waitTime = (res.autoDelay !== false) ? Math.floor(Math.random() * 2000) + 1000 : 0;
-      setTimeout(() => autoClickAnswer(answer), waitTime);
+      setTimeout(() => {
+         autoClickAnswer(answer);
+         
+         if (autopilotActive) {
+            console.log('[ExamPilot] Answer clicked. Waiting before moving to next question.');
+            setTimeout(() => {
+               if (autopilotActive) {
+                  clickNextButton();
+                  // Wait for navigation and network request before scanning text again
+                  setTimeout(() => {
+                     if (autopilotActive) startAutopilotLoop();
+                  }, 4000);
+               }
+            }, 2500);
+         }
+      }, waitTime);
     });
   });
 
-  let latestCodeSolution = '';
 
   // Coding Store Listener (from Alt+C)
   window.addEventListener('gemini-store-code', (e: any) => {
@@ -175,7 +221,7 @@ async function createUI(initialDisplay: 'block' | 'none' = 'block') {
     console.log('[HelpMe] Code solution stored. Press Alt+V to stealth type it.');
   });
 
-  // Stealth Typing Trigger (Alt+V)
+  // Stealth Typing (Alt+V) & Autopilot (Alt+Z)
   window.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.altKey && e.code === 'KeyV') {
       e.preventDefault();
@@ -183,7 +229,19 @@ async function createUI(initialDisplay: 'block' | 'none' = 'block') {
       if (latestCodeSolution) {
         stealthTypeCode(latestCodeSolution);
       } else {
-        console.warn('[HelpMe] No code stored. Press Alt+C first.');
+        console.warn('[ExamPilot] No code stored. Press Alt+C first.');
+      }
+    }
+    
+    if (e.altKey && e.code === 'KeyZ') {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      autopilotActive = !autopilotActive;
+      if (autopilotActive) {
+         console.log('[ExamPilot] ✈️ Autopilot ENGAGED.');
+         startAutopilotLoop();
+      } else {
+         console.log('[ExamPilot] ✈️ Autopilot DISENGAGED.');
       }
     }
   }, true);
@@ -412,13 +470,15 @@ function resetPosition() {
     left: DEFAULTS.position.left,
     right: DEFAULTS.position.right
   });
-  extApi.storage.local.set({ position: DEFAULTS.position });
+  const storage = extApi.storage.sync || extApi.storage.local;
+  storage.set({ position: DEFAULTS.position });
 }
 
 function toggleTransparency() {
   if (!container) return;
   const isTransparent = container.classList.toggle('is-transparent');
-  extApi.storage.local.set({ isTransparent });
+  const storage = extApi.storage.sync || extApi.storage.local;
+  storage.set({ isTransparent });
 }
 
 function makeDraggable(element: HTMLElement, handle: HTMLElement) {
@@ -452,7 +512,8 @@ function makeDraggable(element: HTMLElement, handle: HTMLElement) {
   function closeDragElement() {
     document.onmouseup = null;
     document.onmousemove = null;
-    extApi.storage.local.set({ 
+    const storage = extApi.storage.sync || extApi.storage.local;
+    storage.set({ 
       position: { top: element.style.top, left: element.style.left, right: null } 
     });
   }
