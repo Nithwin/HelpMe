@@ -13,7 +13,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
-        content: resolve(__dirname, 'src/content.tsx'),
+        content: resolve(__dirname, 'src/content/index.ts'),
         background: resolve(__dirname, 'src/background.ts'),
         loader: resolve(__dirname, 'src/content-loader.ts'),
       },
