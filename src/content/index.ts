@@ -114,6 +114,21 @@ function setupModules() {
 
   // Listen for reset events from React
   window.addEventListener('reset-gemini-position', resetPosition);
+
+  // Suppress Monaco Search/Replace Widget
+  const style = document.createElement('style');
+  style.id = 'exampilot-monaco-suppressor';
+  style.textContent = `
+    .monaco-editor .find-widget,
+    .monaco-editor .find-widget.visible,
+    .monaco-editor .replace-widget {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+  `;
+  document.head.appendChild(style);
 }
 
 // --- Global Event Listeners ---
@@ -181,6 +196,15 @@ window.addEventListener('keydown', (e: KeyboardEvent) => {
   if (ctrlOrMeta && spacePressed) {
     e.preventDefault();
     toggleUI(true);
+  }
+
+  // Block Monaco Find/Replace shortcuts
+  if (ctrlOrMeta && (e.code === 'KeyF' || e.code === 'KeyH')) {
+    const target = e.target as HTMLElement;
+    if (target.closest('.monaco-editor') || target.tagName === 'TEXTAREA') {
+       e.preventDefault();
+       e.stopImmediatePropagation();
+    }
   }
 }, true);
 
