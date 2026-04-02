@@ -29,12 +29,18 @@ extApi.runtime.onMessage.addListener((request: any, sender: chrome.runtime.Messa
         if (request.command === 'ask-mcq-auto') mode = 'mcq';
         else if (request.command === 'ask-coding-auto') mode = 'coding';
 
-        toggleExtensionUI(true, 'open');
+        if (mode === 'general') {
+          toggleExtensionUI(true, 'open');
+        } else {
+          if (!container) createUI('none');
+        }
+        
+        // Wait briefly for React initialization if UI was just created invisibly
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('gemini-ask-selection', { 
             detail: { text: selectionText, mode } 
           }));
-        }, 300);
+        }, 500);
       }
       sendResponse({ status: "Asking selection" });
       break;
@@ -58,7 +64,7 @@ extApi.runtime.onMessage.addListener((request: any, sender: chrome.runtime.Messa
 function toggleExtensionUI(focusInput = false, forceState: 'open' | 'close' | 'toggle' = 'toggle') {
   if (!container) {
     if (forceState === 'close') return;
-    createUI().then(() => {
+    createUI('block').then(() => {
       if (focusInput && shadowRoot) {
         setTimeout(() => (shadowRoot!.querySelector('textarea') as HTMLTextAreaElement)?.focus(), 150);
       }
@@ -78,7 +84,7 @@ function toggleExtensionUI(focusInput = false, forceState: 'open' | 'close' | 't
   }
 }
 
-async function createUI() {
+async function createUI(initialDisplay: 'block' | 'none' = 'block') {
   container = document.createElement('div');
   container.id = 'helpme-shadow-container';
   document.body.appendChild(container);
@@ -95,7 +101,7 @@ async function createUI() {
     width: '400px',
     height: '550px',
     zIndex: '2147483647',
-    display: 'block',
+    display: initialDisplay,
     borderRadius: '16px',
     overflow: 'hidden',
     transition: 'background-color 0.3s, backdrop-filter 0.3s, border 0.3s',
@@ -336,6 +342,8 @@ function autoClickAnswer(answer: string) {
   // 1. Precise Letter/Text Match in Labels/Buttons
   const allElements = document.querySelectorAll('button, input, label, div, span, li, a, [role="button"], [role="radio"]');
   
+  let fallbackLetterElement: HTMLElement | null = null;
+  
   for (const el of Array.from(allElements)) {
     const element = el as HTMLElement;
     const text = element.textContent?.trim() || '';
@@ -355,6 +363,9 @@ function autoClickAnswer(answer: string) {
         element.click();
         return;
       }
+      if (letter && labelText === letter.toLowerCase()) {
+        if (!fallbackLetterElement) fallbackLetterElement = element;
+      }
     }
 
     // Check generic text-based clickable elements
@@ -370,6 +381,9 @@ function autoClickAnswer(answer: string) {
         element.click();
         return;
       }
+      if (elementText === letter.toLowerCase() && (element.tagName === 'DIV' || element.tagName === 'SPAN' || element.tagName === 'BUTTON' || element.tagName === 'LI')) {
+        if (!fallbackLetterElement) fallbackLetterElement = element;
+      }
     }
   }
 
@@ -383,8 +397,12 @@ function autoClickAnswer(answer: string) {
     }
   }
 
-  // 3. Fallback: Search for SVG/Canvas containers (Simulated click on center of matched text)
-  // Note: Canvas is difficult without OCR coordinates, but we can try reaching for containers
+  // 3. Fallback: Exact Single Letter Detached Match
+  if (fallbackLetterElement) {
+    console.log('[HelpMe] Using detached exact-letter fallback for auto-click');
+    fallbackLetterElement.click();
+    return;
+  }
 }
 
 function resetPosition() {
