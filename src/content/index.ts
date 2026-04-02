@@ -65,11 +65,23 @@ function focusTextArea() {
 }
 
 async function handleShortcutAsk(command: string) {
-  const selectionText = window.getSelection()?.toString().trim();
-  if (!selectionText) return;
-
+  let text = window.getSelection()?.toString().trim();
   const mode = command === 'ask-mcq-auto' ? 'mcq' : command === 'ask-coding-auto' ? 'coding' : 'general';
-  
+
+  // If no selection and MCQ, attempt auto-extraction of current question
+  if (!text && mode === 'mcq') {
+    console.log('[ExamPilot] No selection, attempting auto-extraction...');
+    const selectors = ['.question-content', '.problem-description', '.question-body', '#question-text', '.css-1017e8m'];
+    let area: HTMLElement | null = null;
+    for (const sel of selectors) {
+      area = document.querySelector(sel);
+      if (area) break;
+    }
+    text = area ? area.innerText : document.body.innerText;
+  }
+
+  if (!text) return;
+
   if (mode === 'general') {
     await toggleUI(true);
   } else {
@@ -83,7 +95,7 @@ async function handleShortcutAsk(command: string) {
   
   setTimeout(() => {
     window.dispatchEvent(new CustomEvent('gemini-ask-selection', { 
-      detail: { text: selectionText, mode } 
+      detail: { text, mode } 
     }));
   }, 500);
 }

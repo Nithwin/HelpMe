@@ -5,9 +5,7 @@ export function clickNextButton() {
    // 1. Expanded pool of "Next" keywords across different cases and formats
    const nextKeywords = [
       'next', 'next >', 'save & next', 'save and next',
-      'submit and next', 'continue', 'proceed', 'finish',
-      'submit answer', '→', 'next question', 'got it',
-      'confirm', 'save', 'submit', 'move on'
+      'submit and next', 'continue', 'proceed', '→', 'next question', 'got it', 'move on', 'next page'
    ];
 
    for (const btn of Array.from(buttons)) {
