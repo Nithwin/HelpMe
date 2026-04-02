@@ -9,8 +9,8 @@ export async function createUI(initialDisplay: 'block' | 'none' = 'block') {
   container.id = 'exampilot-shadow-container';
   document.body.appendChild(container);
 
-  const storage = extApi.storage.sync || extApi.storage.local;
-  const state = await storage.get(['position', 'isTransparent']);
+  const storage = (extApi && extApi.storage) ? (extApi.storage.sync || extApi.storage.local) : null;
+  const state = storage ? await storage.get(['position', 'isTransparent']) : {};
   const currentPos = state.position || { top: '20px', right: '20px' };
   const isTransparent = state.isTransparent !== undefined ? state.isTransparent : true;
 

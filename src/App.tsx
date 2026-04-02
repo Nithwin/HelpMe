@@ -50,7 +50,11 @@ function App() {
 
   useEffect(() => {
     const loadSettings = async () => {
-      const storage = extApi.storage.sync || extApi.storage.local;
+      const storage = (extApi && extApi.storage) ? (extApi.storage.sync || extApi.storage.local) : null;
+      if (!storage) {
+        setShowSettings(true);
+        return;
+      }
       const result = await storage.get([
         'activeProvider',
         'geminiApiKey',

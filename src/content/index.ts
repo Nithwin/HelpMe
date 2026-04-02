@@ -6,6 +6,9 @@ import { clickNextButton, startAutopilotLoop } from './autopilot';
 
 const extApi = (globalThis as any).browser ?? (globalThis as any).chrome;
 
+// Safety check for extension context
+const isExtensionContext = !!(extApi && extApi.runtime && extApi.runtime.id);
+
 let container: HTMLElement | null = null;
 let shadowRoot: ShadowRoot | null = null;
 let latestCodeSolution = '';
@@ -92,7 +95,7 @@ function setupModules() {
   setTimeout(() => {
     const header = shadowRoot?.querySelector('.app-header');
     if (header && container) makeDraggable(container, header as HTMLElement);
-  }, 500);
+  }, 800);
 
   // Initialize Selection Bypass
   enableSelectionBypass(container);
@@ -108,6 +111,11 @@ window.addEventListener('gemini-select-answer', (e: any) => {
   const answer = e.detail;
   if (!answer) return;
   
+  if (!isExtensionContext) {
+    autoClickAnswer(answer);
+    return;
+  }
+
   const storage = extApi.storage.sync || extApi.storage.local;
   storage.get(['autoDelay']).then((res: any) => {
     const waitTime = (res.autoDelay !== false) ? Math.floor(Math.random() * 2000) + 1000 : 0;
@@ -172,13 +180,17 @@ async function resetPosition() {
     left: DEFAULTS.position.left,
     right: DEFAULTS.position.right
   });
-  const storage = extApi.storage.sync || extApi.storage.local;
-  await storage.set({ position: DEFAULTS.position });
+  if (isExtensionContext) {
+    const storage = extApi.storage.sync || extApi.storage.local;
+    await storage.set({ position: DEFAULTS.position });
+  }
 }
 
 async function toggleTransparency() {
   if (!container) return;
   const isTransparent = container.classList.toggle('is-transparent');
-  const storage = extApi.storage.sync || extApi.storage.local;
-  await storage.set({ isTransparent });
+  if (isExtensionContext) {
+    const storage = extApi.storage.sync || extApi.storage.local;
+    await storage.set({ isTransparent });
+  }
 }
